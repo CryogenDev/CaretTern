@@ -144,7 +144,8 @@ function(require, exports, module) {
 
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
-        editor_for_OnCusorChange.ternServer.updateArgHints(editor);
+       // console.log('updating arg hints', editor_for_OnCusorChange);
+        editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
 
     //automatically start auto complete when period is typed
@@ -183,12 +184,14 @@ function(require, exports, module) {
                     this.ternServer = aceTs;
                     this.commands.addCommand(Autocomplete.startCommand);
                     editor_for_OnCusorChange = this; //hack
+                   // console.log('binding on cursor change');
                     this.getSession().selection.on('changeCursor', onCursorChange_Tern);
                     this.commands.on('afterExec', onAfterExec_Tern);
                     aceTs.bindAceKeys(this);
                 }
                 else {
                     this.ternServer = undefined;
+                   // console.log('disabling on cursor change');
                     this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
                     if (!this.enableBasicAutocompletion) {
@@ -919,6 +922,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         place.top = editor.renderer.$cursorLayer.cursors[0].offsetTop; //this gets top correctly regardless of scrolling, but left is not correct
 
         place.top += editor.renderer.scroller.getBoundingClientRect().top; //top offset of editor on page
+        
+        place.left += editor.renderer.container.offsetLeft;
         ts.activeArgHints = makeTooltip(place.left + 45, place.top + 17, tip);
 
         /*   COMEBACK-- add remove tip on scroll
@@ -932,6 +937,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
             editor.on("scroll", clear);
             */
+            
     }
 
     function parseFnType(text) {
@@ -1419,7 +1425,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         //#endregion
 
         //var worker = new Worker(ts.options.workerScript);
-        var worker = new fakeWorker();        
+        var worker = new fakeWorker();
         worker.postMessage({
             type: "init",
             defs: ts.options.defs,

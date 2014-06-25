@@ -1,15 +1,8 @@
-define([
-    "command",
-    "editor",
-    "ui/statusbar",
-    "settings!user,ace"
-], function (command, editor, status, Settings) {
-
+define(["command", "editor", "ui/statusbar", "settings!user,ace"], function(command, editor, status, Settings) {
     var userConfig = Settings.get("user");
-    command.on("init:restart", function () {
+    command.on("init:restart", function() {
         userConfig = Settings.get("user");
     });
-
     //load the syntax commands and set them up in the command listings
     var aceConfig = Settings.get("ace");
     for (var i = 0; i < aceConfig.modes.length; i++) {
@@ -28,15 +21,13 @@ define([
             label: "Set Theme: " + theme.label
         });
     }
-
     //this is a place to put bindings that don't have direct equivalents in Ace, but are required for Sublime compatibility
-    command.on("sublime:expand-to-line", function (c) {
+    command.on("sublime:expand-to-line", function(c) {
         editor.execCommand("gotolinestart");
         editor.execCommand("selecttolineend");
         if (c) c();
     });
-
-    command.on("sublime:expand-to-paragraph", function (c) {
+    command.on("sublime:expand-to-paragraph", function(c) {
         var session = editor.getSession();
         var selection = editor.getSelection();
         var currentLine = editor.getCursorPosition().row;
@@ -64,8 +55,7 @@ define([
         selection.selectTo(endLine);
         if (c) c();
     });
-
-    command.on("sublime:expand-to-matching", function (c) {
+    command.on("sublime:expand-to-matching", function(c) {
         var Range = ace.require("ace/range").Range;
         var position = editor.getCursorPosition();
         var line = editor.getSession().getLine(position.row);
@@ -91,9 +81,11 @@ define([
                         var selection = editor.getSession().getSelection();
                         selection.setRange(new Range(position.row, i + 1, position.row, j));
                         return;
-                    } else if (line[j] == match) {
+                    }
+                    else if (line[j] == match) {
                         depth--;
-                    } else if (line[j] == closers[match]) {
+                    }
+                    else if (line[j] == closers[match]) {
                         depth++;
                     }
                 }
@@ -105,8 +97,7 @@ define([
         editor.execCommand("selecttomatching");
         if (c) c();
     });
-
-    command.on("sublime:tabs-to-spaces", function (c) {
+    command.on("sublime:tabs-to-spaces", function(c) {
         var session = editor.getSession();
         var text = session.getValue();
         var spaces = new Array(userConfig.indentation + 1).join(" ");
@@ -114,8 +105,7 @@ define([
         session.setValue(text);
         if (c) c();
     });
-
-    command.on("sublime:spaces-to-tabs", function (c) {
+    command.on("sublime:spaces-to-tabs", function(c) {
         var session = editor.getSession();
         var text = session.getValue();
         var replace = new RegExp(new Array(userConfig.indentation + 1).join(" "), "g");
@@ -123,13 +113,11 @@ define([
         session.setValue(text);
         if (c) c();
     });
-
-    command.on("ace:set-newline-mode", function (type, c) {
+    command.on("ace:set-newline-mode", function(type, c) {
         editor.session.doc.setNewLineMode(type);
         if (c) c();
     });
-
-    command.on("ace:trim-whitespace", function (c) {
+    command.on("ace:trim-whitespace", function(c) {
         var session = editor.getSession();
         var folds = session.getAllFolds();
         var doc = session.doc;
@@ -141,7 +129,7 @@ define([
             needle: re
         });
         var ranges = search.findAll(session);
-        ranges.forEach(function (range) {
+        ranges.forEach(function(range) {
             var original = session.getTextRange(range);
             var replaced = original.replace(re, trimEmpty ? "" : "$1");
             doc.replace(range, replaced);
@@ -150,8 +138,7 @@ define([
         session.addFolds(folds);
         if (c) c();
     });
-
-    command.on("sublime:wrap", function (c) {
+    command.on("sublime:wrap", function(c) {
         var Range = ace.require("ace/range").Range;
         var lang = ace.require("ace/lib/lang");
         var session = editor.getSession();
@@ -192,7 +179,8 @@ define([
         while (partCount < selectedTextParts.length) {
             if (selectedTextParts[partCount].length + lineToAdd.length + 1 < rulerColumn) {
                 lineToAdd += (partCount === 0 ? "" : " ") + selectedTextParts[partCount];
-            } else {
+            }
+            else {
                 lineToAdd = lang.stringTrimRight(lineToAdd);
                 if (lineToAdd.length > 0) {
                     lineToAdd += session.doc.getNewLineCharacter();
@@ -208,7 +196,8 @@ define([
                         tmpLine = tmpLine.slice(rulerColumn - (indentValue.length + 1));
                     }
                     lineToAdd = indentValue + tmpLine;
-                } else {
+                }
+                else {
                     lineToAdd = indentValue + selectedTextParts[partCount];
                 }
             }
@@ -223,32 +212,28 @@ define([
         editor.session.doc.replace(new Range(startLine, 0, endLine, 0), textToAdd);
         if (c) c();
     });
-
     //we also add a command redirect for firing Ace commands via regular command attributes
     command.on("ace:command", editor.execCommand.bind(editor));
-
     //unbind the keys for the palette, whatever it does.
     editor.commands.bindKey("Ctrl-P", null);
     editor.commands.bindKey("Ctrl-Shift-P", null);
-
     //filter some Ace commands for UI purposes
     var isRecording = false;
-    command.on("ace:togglemacro", function (c) {
+    command.on("ace:togglemacro", function(c) {
         isRecording = !isRecording;
         editor.execCommand("togglerecording");
         editor.focus();
         if (isRecording) {
             status.setMessage("Recording macro...");
-        } else {
+        }
+        else {
             status.clearMessage();
         }
         if (c) c();
     });
-
     //API bindings
-    command.on("editor:insert", function (text, c) {
+    command.on("editor:insert", function(text, c) {
         editor.insert(text);
         if (c) c();
     });
-
 });

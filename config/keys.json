@@ -47,5 +47,6 @@
   "Ctrl-.": { "command": "app:show-prompt" },
 
   //Morgans junk
-  "Ctrl-B": { "ace": "beautify" }
+  "Ctrl-B": { "ace": "beautify" },
+  "Alt-.": { "ace": "ternJumpToDef" }
 }
