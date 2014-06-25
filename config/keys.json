@@ -44,5 +44,8 @@
   "Ctrl-0": { "command": "editor:default-zoom" },
   
   //dev mode
-  "Ctrl-.": { "command": "app:show-prompt" }
+  "Ctrl-.": { "command": "app:show-prompt" },
+
+  //Morgans junk
+  "Ctrl-B": { "ace": "beautify" }
 }
