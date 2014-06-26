@@ -195,7 +195,7 @@ define([
         buffer: null //not yet, will be HTML5 filesystem for scratch files
       }
       
-      console.log(retained);
+      //console.log(retained);
       
       //try to restore items in order
       M.map(

@@ -617,7 +617,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return n;
     }
 
-
     /**
      * Gets the text for a doc
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
@@ -789,6 +788,72 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
+    
+    /**
+     * shows type info
+     * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
+     */
+    function showType(ts, editor, pos, calledFromCursorActivity) {
+        ts.request(editor, "type", function (error, data) {
+            var tip = '';
+            if (error) {
+                if (calledFromCursorActivity) {
+                    return;
+                }
+                return showError(ts, editor, error);
+            }
+            if (ts.options.typeTip) { //this is not entered in Morgans tests
+                tip = ts.options.typeTip(data);
+            }
+            else {
+                //cursor activity
+                if (calledFromCursorActivity) {
+                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)") {
+                        return;
+                    }
+                    // logO(data, 'data');
+                }
+                tip = elt("span", null, elt("strong", null, data.type || "not found"));
+                if (data.doc) {
+                    //show line breaks in tooltip: .split("\n").join("<br />")
+                    tip.appendChild(document.createTextNode(" — " + data.doc));
+                }
+                if (data.url) {
+                    tip.appendChild(document.createTextNode(" "));
+                    //added by morgan: make link open in new window
+                    var link = elt("a", null, "[docs]");
+                    link.target = "_blank";
+                    link.href = data.url;
+                    tip.appendChild(link);
+                }
+                //added by morgan
+                if (data.origin) {
+                    tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
+                }
+            }
+            tempTooltip(editor, tip, -1);
+        }, pos);
+    }
+
+    /**
+     * gets cursor posistion for opening tooltip below the cusor.
+     * @returns {object} - {top:number, left:number)
+     */
+    function getCusorPosForTooltip(editor){
+        //there is likely a better way to do this...
+        var place = editor.renderer.$cursorLayer.getPixelPosition(); //this gets left correclty, but not top if there is scrolling
+        place.top = editor.renderer.$cursorLayer.cursors[0].offsetTop; //this gets top correctly regardless of scrolling, but left is not correct
+        place.top += editor.renderer.scroller.getBoundingClientRect().top; //top offset of editor on page
+        place.left += editor.renderer.container.offsetLeft;
+        //45 and 17 are arbitrary numbers that seem to put the tooltip in the right place
+        return {
+            left: place.left + 45,
+            top: place.top + 17
+        };
+    }
+        
+    
+    
 
     //#region ArgHints
 
@@ -915,16 +980,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         tip.appendChild(document.createTextNode(tp.rettype ? ") ->\u00a0" : ")"));
         if (tp.rettype) tip.appendChild(elt("span", cls + "type", tp.rettype));
 
-        //TODO: see ace source (master)- demo/kitchen-sink/token_tooltip.js to get better way to handle the tooltips!
-
         //get cursor location- there is likely a better way to do this...
-        var place = editor.renderer.$cursorLayer.getPixelPosition(); //this gets left correclty, but not top if there is scrolling
-        place.top = editor.renderer.$cursorLayer.cursors[0].offsetTop; //this gets top correctly regardless of scrolling, but left is not correct
-
-        place.top += editor.renderer.scroller.getBoundingClientRect().top; //top offset of editor on page
-        
-        place.left += editor.renderer.container.offsetLeft;
-        ts.activeArgHints = makeTooltip(place.left + 45, place.top + 17, tip);
+        var place = getCusorPosForTooltip(editor);
+        ts.activeArgHints = makeTooltip(place.left, place.top , tip);
 
         /*   COMEBACK-- add remove tip on scroll
             //added by morgan
@@ -939,6 +997,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             */
             
     }
+    
 
     function parseFnType(text) {
         var args = [],
