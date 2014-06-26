@@ -123,8 +123,8 @@
     "label": "Tools",
     "sub": [
         {
-        "label": "Second Window",
-        "command": "app:secondwindow",
+        "label": "New Window",
+        "command": "app:newwindow",
         "retainFocus": true
     },{
         "label": "Go To Anything",

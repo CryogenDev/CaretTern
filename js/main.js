@@ -1,5 +1,6 @@
 chrome.version = window.navigator.appVersion.match(/Chrome\/(\d+)/)[1] * 1 || 0;
 require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/manos", "ui/projectManager", "ui/keys", "fileManager", "ui/menus", "ui/palette", "ui/cli", "api", "storage/syncfile"], function(command, Settings, dialog, sessions, M) {
+    
     //#region Default
     var frame = chrome.app.window.current();
     var setTheme = function() {
@@ -151,19 +152,13 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
     //#endregion
 
     //#region AddedByMorgan
-    command.on("app:secondwindow", function() {
-        var id2 = "caret:main2";
-        if (chrome.app.window.get(id2)) {
-            chrome.app.window.get(id2).drawAttention();
-        }
-        else {
-            chrome.app.window.create("main.html", {
-                id: id2,
-                frame: "none",
-                minWidth: 640,
-                minHeight: 480
-            });
-        }
+    command.on("app:newwindow", function() {
+        chrome.app.window.create("main.html", {
+            id: "caret:main" + chrome.app.window.getAll().length+1,
+            frame: "none",
+            minWidth: 640,
+            minHeight: 480
+        });
     });
     //#endregion
 
