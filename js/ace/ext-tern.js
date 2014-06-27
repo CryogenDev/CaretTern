@@ -145,9 +145,15 @@ function(require, exports, module) {
     //hack: need a better solution to get the editor variable inside of the editor.getSession().selection.onchangeCursor event as the passed variable is of the selection, not the editor. This variable is being set in the enableTern set Option
     var editor_for_OnCusorChange = null;
 
+    var debounce_ternShowType;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
-        // console.log('updating arg hints', editor_for_OnCusorChange);
+        //debounce to auto show type
+        clearTimeout(debounce_ternShowType);
+        debounce_ternShowType = setTimeout(function() {
+            editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
+        }, 100);
+        
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
 
@@ -814,6 +820,33 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
+        if(calledFromCursorActivity){ //check if currently in call, if so, then exit
+            try { //throws error if no popup
+                if (editor.completer.popup.isOpen) {
+                    return;
+                }
+            }
+            catch (ex) {}
+            var callPos = getCallPos(ts, editor);
+            if (callPos) {
+                return;
+            }
+            if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
+                return; //something is selected
+            }
+            var tok = getCurrentToken(ts,editor);
+            if(!tok){
+                return;
+            }
+            //function definition
+            if(tok.type.indexOf('entity.name.function') !== -1){
+                return;
+            }
+            // could be 'function', which is start of an anon fn
+            if(tok.type.indexOf('storage.type') !== -1){
+                return;
+            }
+        }
         if (!inJavascriptMode(editor)) {
             return;
         }
@@ -854,8 +887,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
                 }
             }
-            var place = getCusorPosForTooltip(editor);
-            makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
+            //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
+            setTimeout(function(){
+                var place = getCusorPosForTooltip(editor);
+                // console.log('place',place);
+                // setTimeout(function(){console.log('place after 1ms', getCusorPosForTooltip(editor));},1);
+                makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
+            },10);
         }, pos);
     }
 
@@ -876,22 +914,31 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         };
     }
 
+    /**
+     * Gets token at current cursor posistion. Returns null if none
+     */
+    function getCurrentToken(ts,editor){
+        try{
+            var pos = editor.getSelectionRange().end;
+            return editor.session.getTokenAt(pos.row, pos.column);
+        }
+        catch(ex){
+            showError(ts,editor,ex);
+        }
+    }
 
     //#region ArgHints
-
+    
     /**
-     * If editor is currently inside of a function call, this will try to get definition of the function that is being called, if successfull will show tooltip about arguments for the function being called.
-     * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
+     * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
      */
-    function updateArgHints(ts, editor) {
-        closeArgHints(ts);
+    function getCallPos(ts,editor){
         if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
             return; //something is selected
         }
         if (!inJavascriptMode(editor)) {
             return; //javascript mode only (need to comeback to make work while in javascipt inside of html)
         }
-
         var start = {}; //start of query to tern (start of the call location)
         var currentPosistion = editor.getSelectionRange().start; //{row,column}
         var currentLine = currentPosistion.row;
@@ -949,8 +996,37 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!start.hasOwnProperty('line')) { //start not found
             return;
         }
-        start = toTernLoc(start); //convert
-
+        return {
+            start: toTernLoc(start),
+            "argpos": argpos
+        }; //convert
+    }
+    
+    /**
+     * Gets if editor is currently in call posistion
+     */
+    function isInCall(ts,editor){
+        var callPos = getCallPos(ts, editor);
+        if (callPos) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * If editor is currently inside of a function call, this will try to get definition of the function that is being called, if successfull will show tooltip about arguments for the function being called.
+     * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
+     */
+    function updateArgHints(ts, editor) {
+        closeArgHints(ts);
+        //ADD
+        var callPos = getCallPos(ts,editor);
+        if(!callPos ){
+            return;
+        }
+        var start = callPos.start;
+        var argpos = callPos.argpos;
+        
         //check for arg hints for the same call start, if found, then use them but update the argPos (occurs when moving between args in same call)
         var cache = ts.cachedArgHints;
         if (cache && cache.doc == editor && cmpPos(start, cache.start) === 0) {
@@ -1445,36 +1521,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     function trackChange(ts, doc, change) {
-        //log('trackChange');
-        //var data = findDoc(editor);
-
-        //var argHints = cachedArgHints;
-        //TODO
-        //if (argHints && argHints.doc == doc && cmpPos(argHints.start, change.to) <= 0)
-        //  cachedArgHints = null;
-        //DBG(arguments, true);
-
-        /*log('change', change);
-          { change=
-	        "data": {
-		        "action": "removeText" OR  "insertText",
-		        "range": {
-			        "start": {
-				        "row": 14,
-				        "column": 21
-			        },
-			        "end": {
-				        "row": 14,
-				        "column": 22
-			        }
-		        },
-		        "text": "0"     -- the text that was changed
-	        }
-         */
-
-        //log('doc', doc);
-        //log('change', change);
-
         //NOTE get value: editor.ternServer.docs['[doc]'].doc.session.getValue()
 
         //convert ace Change event to object that is used in logic below
