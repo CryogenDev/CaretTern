@@ -318,7 +318,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         ternJumpBack: {
             name: "ternJumpBack",
             exec: function(editor) {
-                editor.ternServer.ternJumpBack(editor);
+                editor.ternServer.jumpBack(editor);
             },
             bindKey: "Alt-,"
         },
@@ -334,9 +334,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     TernServer.prototype = {
         bindAceKeys: function(editor) {
-            editor.commands.addCommand(aceCommands.ternJumpToDef);
-            editor.commands.addCommand(aceCommands.ternShowType);
-
+            for(var p in aceCommands){
+                var obj = aceCommands[p];
+                editor.commands.addCommand(obj);
+            }
         },
         /**
          * Add a file to tern server
@@ -1253,12 +1254,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         });
         else inner();
     }
-    // NOT CONVERTED
-    function jumpBack(ts, cm) {
+    
+    /**
+     * Jumps back to previous posistion after using JumpTo
+     */
+    function jumpBack(ts, editor) {
         var pos = ts.jumpStack.pop(),
             doc = pos && ts.docs[pos.file];
         if (!doc) return;
-        moveTo(ts, findDoc(ts, cm.getDoc()), doc, pos.start, pos.end);
+        moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
     
     /**

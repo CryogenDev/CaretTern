@@ -123,7 +123,9 @@
     "Alt-.": {
         "ace": "ternJumpToDef"
     },
-    
+    "Alt-,": {
+        "ace": "ternJumpBack"
+    },
     "Ctrl-I": {
         "ace": "ternShowType"
     },
