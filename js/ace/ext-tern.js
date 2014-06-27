@@ -964,7 +964,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: start
         }, function(error, data) {
             if (error) {
-                return showError(ts,editor, error);
+                //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
+                if(error.toString().toLowerCase().indexOf('no expression at the given position') ===-1){
+                    return showError(ts, editor, error);
+                }
             }
             if (error || !data.type || !(/^fn\(/).test(data.type)) {
                 return;
@@ -1004,20 +1007,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //get cursor location- there is likely a better way to do this...
         var place = getCusorPosForTooltip(editor);
-        ts.activeArgHints = makeTooltip(place.left, place.top, tip);
-
-        /*   COMEBACK-- add remove tip on scroll
-            //added by morgan
-            function clear() {
-                cm.off("scroll", clear);
-                if (!ts.activeArgHints) {
-                    return;
-                }
-                closeArgHints(ts);
-            }
-            editor.on("scroll", clear);
-            */
-
+        ts.activeArgHints = makeTooltip(place.left, place.top, tip,editor,true);//note: this closes on scroll and cursor activity, so the closeArgHints call at the top of this wont need to remove the tip
     }
 
 
@@ -1082,6 +1072,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         alert('need to implment dialog');
     }
 
+    /**
+     * Creates element
+     */
     function elt(tagname, cls /*, ... elts*/ ) {
         var e = document.createElement(tagname);
         if (cls) e.className = cls;
@@ -1106,27 +1099,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     }
 
     //TODO- not converted yet!
-    function tempTooltip(cm, content, int_timeout) {
-        alert('need to implement tempTooltip');
-        return;
-        //change by morgan: hide tip on scroll and longer timeout for fading of tip by default
-        var where = cm.cursorCoords();
-        var tip = makeTooltip(where.right + 1, where.bottom, content);
-
-        function clear() {
-            if (!tip.parentNode) return;
-            cm.off("cursorActivity", clear);
-            cm.off("scroll", clear);
-            fadeOut(tip, int_timeout);
-        }
-        if (!int_timeout) {
+    function tempTooltip(editor, content, int_timeout) {
+         if (!int_timeout) {
             int_timeout = 3000;
         }
-        if (int_timeout !== -1) {
-            setTimeout(clear, int_timeout);
-        }
-        cm.on("cursorActivity", clear);
-        cm.on("scroll", clear);
+        var location = getCusorPosForTooltip(editor);
+        makeTooltip(location.left, location.top, content,editor, true, int_timeout);
     }
     /**
      * Makes a tooltip to show extra info in the editor
@@ -1134,24 +1112,48 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {number} y - y coordinate (relative to document)
      * @param {element} content
      * @param {ace.editor} [editor] - must pass editor if closeOnCusorActivity=true to bind event
-     * @param {bool} [closeOnCusorActivity=false] - pass true to bind next cursor activty to destroy this tooltip
+     * @param {bool} [closeOnCusorActivity=false] - pass true to bind next cursor activty to destroy this tooltip, this will also bind closing on editor scroll
+     * @param {int} [faceOutDuration] - pass a number to make the tooltip fade out (make it temporary)
      */
-    function makeTooltip(x, y, content, editor, closeOnCusorActivity) {
+    function makeTooltip(x, y, content, editor, closeOnCusorActivity, fadeOutDuration) {
         var node = elt("div", cls + "tooltip", content);
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
+    
         if (closeOnCusorActivity === true) {
             if (!editor) {
                 throw Error('tern.makeTooltip called with closeOnCursorActivity=true but editor was not passed. Need to pass editor!');
             }
             //close tooltip and unbind
             var closeThisTip = function() {
-                if (!node.parentNode) return;//not sure what this is for, its from CM
+                if (!node.parentNode) return; //not sure what this is for, its from CM
                 remove(node);
                 editor.getSession().selection.off('changeCursor', closeThisTip);
+                editor.getSession().off('changeScrollTop', closeThisTip);
+                editor.getSession().off('changeScrollLeft', closeThisTip);
             };
             editor.getSession().selection.on('changeCursor', closeThisTip);
+            editor.getSession().on('changeScrollTop',closeThisTip);
+            editor.getSession().on('changeScrollLeft',closeThisTip);
+        }
+      
+        if (fadeOutDuration) {
+            fadeOutDuration = parseInt(fadeOutDuration, 10);
+            if (fadeOutDuration > 100) {
+                //fade out tip
+                var fadeThistip = function() {
+                    if (!node.parentNode) return; //not sure what this is for, its from CM
+                    fadeOut(node, fadeOutDuration);
+                    try {
+                        editor.getSession().selection.off('changeCursor', closeThisTip);
+                        editor.getSession().off('changeScrollTop', closeThisTip);
+                        editor.getSession().off('changeScrollLeft', closeThisTip);
+                    }
+                    catch (ex) {}
+                }
+                setTimeout(fadeThistip, fadeOutDuration);
+            }
         }
         return node;
     }
@@ -1178,10 +1180,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     /**
      * Shows error
+     * @param {bool} [noPopup=false] - pass true to log error without showing popUp tooltip with error
      */
-    function showError(ts,editor, msg) {
+    function showError(ts,editor, msg, noPopup) {
         try{
             log('ternError',msg);
+            if(!noPopup){
+                var el = elt('span',null,msg);
+                el.style.color='red';
+                tempTooltip(editor, el);
+                //tempTooltip(editor, msg.toString());
+            }
             
            /* if (msg && msg.constructor.name === 'Error') {
                 
