@@ -3,42 +3,7 @@
     "promptForUpdates": true,
 
     "defaultTheme": "chrome", //This should be any of the supported Ace themes
-    /*
-  Ace theme names are usually underscored, lowercase versions of the "friendly" names:
-    ambiance
-    chaos
-    chrome
-    clouds
-    clouds_midnight
-    cobalt
-    crimson_editor
-    dawn
-    dreamweaver
-    eclipse
-    github
-    idle_fingers
-    katzenmilch
-    kuroir
-    merbivore
-    merbivore_soft
-    monokai
-    mono_industrial
-    pastel_on_dark
-    solarized_dark
-    solarized_light
-    son_of_obsidian
-    terminal
-    textmate
-    tomorrow
-    tomorrow_night
-    tomorrow_night_blue
-    tomorrow_night_bright
-    tomorrow_night_eighties
-    twilight
-    vibrant_ink
-    xcode
-  */
-"uiTheme": "light", //dark or light, your pick
+    "uiTheme": "light", //dark or light, your pick
     "autoHideProject": true, //collapse the project view until you hover
     "immersiveFullscreen": false, //hides menus/tabs in Chrome OS fullscreen mode
     "highlightLine": true,
