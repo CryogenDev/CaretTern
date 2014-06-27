@@ -1,3 +1,5 @@
+/* jshint laxcomma: false, unused: true, laxbreak:false, maxerr: 10000 */
+
 define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
 
 
@@ -2022,6 +2024,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         cmd.value = s.toString();
     }
     window.command = command; //debugging
+    console.log('global: command (caret command manager)')
+    
+    
+    
+    
+  
     //#endregion
 
 

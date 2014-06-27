@@ -1,3 +1,5 @@
+/*jshint maxerr: 10000 */
+
 /**
  * Ace Tern server configuration (uses worker in separate file)
  *
@@ -300,7 +302,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return {
             "line": line,
             "ch": ch
-        }
+        };
     };
     var cls = "Ace-Tern-";
     var bigDoc = 250;
@@ -312,6 +314,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.ternServer.jumpToDef(editor);
             },
             bindKey: "Alt-."
+        },
+        ternJumpBack: {
+            name: "ternJumpBack",
+            exec: function(editor) {
+                editor.ternServer.ternJumpBack(editor);
+            },
+            bindKey: "Alt-,"
         },
         ternShowType: {
             name: "ternShowType",
@@ -508,8 +517,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         // lineCharPositions makes the tern result a position instead of a file offset integer. From Tern: Offsets into a file can be either (zero-based) integers, or {line, ch} objects, where both line and ch are zero-based integers. Offsets returned by the server will be integers, unless the lineCharPositions field in the request was set to true, in which case they will be {line, ch} objects.
 
         query.lineCharPositions = true;
-
         //build the query start and end based on current cusor location of editor
+        
+        //NOTE: DO NOT use '===' for query.end == null below as it returns a different result!
         if (query.end == null) { //this is null for get completions
             var currentSelection = doc.doc.getSelectionRange(); //returns range: start{row,column}, end{row,column}
             query.end = toTernLoc(pos || currentSelection.end);
@@ -667,7 +677,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         function(error, data) {
             if (error) {
-                return showError(editor, error);
+                return showError(ts,editor, error);
             }
             //map ternCompletions to correct format
             var ternCompletions = data.completions.map(function(item) {
@@ -953,7 +963,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: start
         }, function(error, data) {
             if (error) {
-                return showError(editor, error);
+                return showError(ts,editor, error);
             }
             if (error || !data.type || !(/^fn\(/).test(data.type)) {
                 return;
@@ -1165,10 +1175,32 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }, int_timeout);
     }
 
-    function showError(cm, msg) {
+    /**
+     * Shows error
+     */
+    function showError(ts,editor, msg) {
+        try{
+            log('ternError',msg);
+            
+           /* if (msg && msg.constructor.name === 'Error') {
+                
+                console.log('ternError', msg);
+                return;
+            }
+            console.log(new Error('ternError: ' + msg));*/
+        }
+        catch(ex){
+           setTimeout(function() {
+            throw new Error('tern show error failed.' + msg +'\n\n fail error:' + ex);
+        }, 0);
+        }
+		//DBG(arguments,true);
+		
+        //console.log('tern error', new Error('tern error: ' + msg));
+        /* dont like this method as it prevents stack trace
         setTimeout(function() {
             throw new Error('tern error: ' + msg);
-        }, 0);
+        }, 0);*/
     }
 
     function closeArgHints(ts) {
@@ -1191,11 +1223,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 variable: varName || null
             };
             var doc = findDoc(ts, editor);
-
-
-            //BUILD REQUEST -- this builds the query to send to tern (query has the node defnition that we are looking for, so buidRequest must look at codemirrot and find the object the cursor is on and then looks for it)
-            //  logO(buildRequest(ts, doc, req), 'buildRequest result that is sent to tern') //NEVERMIND- this contains the line position currently, but it does NOT contain the node definition we are looking for
-
             //this calls  function findDef(srv, query, file) {
             ts.server.request(buildRequest(ts, doc, req), function(error, data) {
                 if (error) return showError(ts, editor, error);
@@ -1203,11 +1230,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     window.open(data.url);
                     return;
                 }
-                DBG(arguments, true);
+                //DBG(arguments, true);//REMOVE
                 if (data.file) {
                     var localDoc = ts.docs[data.file];
                     var found;
-                    // logO(localDoc.doc, 'localDoc.doc'); logO(data, 'data');
                     if (localDoc && (found = findContext(localDoc.doc, data))) {
                         ts.jumpStack.push({
                             file: doc.name,
@@ -1234,8 +1260,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!doc) return;
         moveTo(ts, findDoc(ts, cm.getDoc()), doc, pos.start, pos.end);
     }
-    // NOT CONVERTED
+    
+    /**
+     * Moves editor to a location (or a location in another document)
+     */
     function moveTo(ts, curDoc, doc, start, end) {
+        curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0);//this will make sure that the line is expanded
         var sel = curDoc.doc.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
         sel.setSelectionRange({
             start: toAceLoc(start),
@@ -1274,8 +1304,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         text += "\n" + editor.session.getLine(cur);
         if (text.slice(0, data.context.length) == data.context) return data;
 
-        //COMEBACK--- need to use editor.find
+        //COMEBACK--- need to use editor.find LEFTOFF
         console.log(new Error('This part is not complete, need to implement using Ace\'s search functionality'));
+        console.log('data.context',data.context);
         var cursor = editor.getSearchCursor(data.context, 0, false);
         var nearest, nearestDist = Infinity;
         while (cursor.findNext()) {
@@ -1298,8 +1329,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: end
         };
     }
+    
     /**
-     * (not exactly sure)
+     * (not exactly sure) Coverted=true
      */
     function atInterestingExpression(editor) {
         var pos = editor.getSelectionRange().end; //editor.getCursor("end"),

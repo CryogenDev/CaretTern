@@ -1,3 +1,4 @@
+/*jshint maxerr: 10000 */
 // tern for codemirror with alterations. for reference only
 (function () {
     //"use strict";//disabled by morgan for easy debugging

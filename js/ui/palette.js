@@ -375,7 +375,8 @@ define([
         sessions.raiseBlurred(current.tab);
         if (current.line) {
           editor.clearSelection();
-          editor.moveCursorTo(current.line, current.column || 0);
+          editor.gotoLine(current.line, current.column || 0);
+          //editor.moveCursorTo(current.line, current.column || 0);
           if (current.column) {
             editor.execCommand("selectwordright");
           }
@@ -433,7 +434,8 @@ define([
         sessions.raiseBlurred(current.tab);
         if (current.line) {
           editor.clearSelection();
-          editor.moveCursorTo(current.line, current.column || 0);
+          editor.gotoLine(current.line, current.column || 0);
+          //editor.moveCursorTo(current.line, current.column || 0);
         }
       }
       this.render();
