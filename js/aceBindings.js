@@ -231,6 +231,7 @@ define(["command", "editor", "ui/statusbar", "settings!user,ace"], function(comm
         }
         if (c) c();
     });
+    
     //API bindings
     command.on("editor:insert", function(text, c) {
         editor.insert(text);
