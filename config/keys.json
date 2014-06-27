@@ -123,6 +123,10 @@
     "Alt-.": {
         "ace": "ternJumpToDef"
     },
+    
+    "Ctrl-I": {
+        "ace": "ternShowType"
+    },
     "f1": {
         "ace": "foldOther"
     },

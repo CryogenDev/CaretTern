@@ -6,6 +6,7 @@
  * - auto init the server and disable it when its not needed
  */
 ace.define('ace/ext/tern', ['require', 'exports', 'module', 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/editor'],
+
 function(require, exports, module) {
 
     //#region LoadCompletors_fromLangTools
@@ -144,7 +145,7 @@ function(require, exports, module) {
 
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
-       // console.log('updating arg hints', editor_for_OnCusorChange);
+        // console.log('updating arg hints', editor_for_OnCusorChange);
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
 
@@ -155,16 +156,16 @@ function(require, exports, module) {
                 var pos = editor.getSelectionRange().end;
                 var tok = editor.session.getTokenAt(pos.row, pos.column);
                 if (tok) {
-                    if (tok.type !== 'string' && tok.type.toString().indexOf('comment') ===-1) {
+                    if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
                         e.editor.execCommand("startAutocomplete");
                     }
                 }
             }
         }
     };
-    
+
     //minimum string length for tern local string completions. set to -1 to disable this
-    var ternLocalStringMinLength=3;
+    var ternLocalStringMinLength = 3;
 
     console.log('TODO- add method for turning off tern server, should also be automatic on mode change. Make sure to remove the cursorchange event bindings that tern has when its off/disabled');
     completers.push(aceTs); //add
@@ -177,21 +178,21 @@ function(require, exports, module) {
             set: function(val) {
                 if (val) {
                     //set default ternLocalStringMinLength
-                    if(this.getOption('ternLocalStringMinLength') === undefined){
-                        this.setOption('ternLocalStringMinLength',ternLocalStringMinLength);
+                    if (this.getOption('ternLocalStringMinLength') === undefined) {
+                        this.setOption('ternLocalStringMinLength', ternLocalStringMinLength);
                     }
                     this.completers = completers;
                     this.ternServer = aceTs;
                     this.commands.addCommand(Autocomplete.startCommand);
                     editor_for_OnCusorChange = this; //hack
-                   // console.log('binding on cursor change');
+                    // console.log('binding on cursor change');
                     this.getSession().selection.on('changeCursor', onCursorChange_Tern);
                     this.commands.on('afterExec', onAfterExec_Tern);
                     aceTs.bindAceKeys(this);
                 }
                 else {
                     this.ternServer = undefined;
-                   // console.log('disabling on cursor change');
+                    // console.log('disabling on cursor change');
                     this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
                     if (!this.enableBasicAutocompletion) {
@@ -203,7 +204,7 @@ function(require, exports, module) {
         },
         ternLocalStringMinLength: {
             set: function(val) {
-               ternLocalStringMinLength = parseInt(val,10);
+                ternLocalStringMinLength = parseInt(val, 10);
             },
             value: false
         },
@@ -311,6 +312,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.ternServer.jumpToDef(editor);
             },
             bindKey: "Alt-."
+        },
+        ternShowType: {
+            name: "ternShowType",
+            exec: function(editor) {
+                editor.ternServer.showType(editor);
+            },
+            bindKey: "Ctrl-I"
         }
     };
 
@@ -318,6 +326,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     TernServer.prototype = {
         bindAceKeys: function(editor) {
             editor.commands.addCommand(aceCommands.ternJumpToDef);
+            editor.commands.addCommand(aceCommands.ternShowType);
 
         },
         /**
@@ -334,11 +343,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             };
             var value = '';
             //GHETTO: hack to let a plain string work as a document for auto complete only. need to comeback and fix (make it add a editor or editor session from the string)
-            if(doc.constructor.name === 'String'){
+            if (doc.constructor.name === 'String') {
                 value = doc;
             }
-            else{
-                value =docValue(this, data);
+            else {
+                value = docValue(this, data);
                 doc.on("change", this.trackChange);
             }
             this.server.addFile(name, value);
@@ -375,8 +384,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             return hint(this, cm, c);
         },
 
-        showType: function(cm, pos) {
-            showType(this, cm, pos);
+        showType: function(cm, pos, calledFromCursorActivity) {
+            showType(this, cm, pos, calledFromCursorActivity);
         },
 
         updateArgHints: function(cm) {
@@ -647,7 +656,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
-    
+
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -655,13 +664,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             docs: true,
             filter: false
         },
-    
+
         function(error, data) {
             if (error) {
                 return showError(editor, error);
             }
             //map ternCompletions to correct format
-            var ternCompletions= data.completions.map(function(item) {
+            var ternCompletions = data.completions.map(function(item) {
                 return {
                     /*add space before icon class so Ace Prefix doesnt mess with it*/
                     iconClass: " " + (item.guess ? cls + "guess" : typeToIcon(item.type)),
@@ -673,33 +682,33 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     meta: item.origin ? item.origin : "tern"
                 };
             });
-            
-            
+
+
             //#region OtherCompletions
-            var otherCompletions=[];
+            var otherCompletions = [];
             //if basic auto completion is on, then get keyword completions that are not found in tern results
             if (editor.getOption('enableBasicAutocompletion') === true) {
-                try{
-                    otherCompletions= editor.session.$mode.getCompletions();
+                try {
+                    otherCompletions = editor.session.$mode.getCompletions();
                 }
-                catch(ex){
+                catch (ex) {
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-            
+
             //add local string completions if enabled, this is far more useful than the local text completions
             // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
             var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
-            if(ternLocalStringMinLength > 0){
+            if (ternLocalStringMinLength > 0) {
                 for (var i = 0; i < editor.session.getLength(); i++) {
                     var tokens = editor.session.getTokens(i);
                     for (var n = 0; n < tokens.length; n++) {
                         var t = tokens[n];
                         if (t.type === 'string') {
                             var val = t.value.toString().substr(1, t.value.length - 2).trim(); //remove first and last quotes
-                            if (val.length >= ternLocalStringMinLength && val.indexOf(' ') ===-1 && val.indexOf('\'') ===-1 && val.indexOf('"') ===-1) {
-                                var isDuplicate=false;
-                                if(otherCompletions.length>0){
+                            if (val.length >= ternLocalStringMinLength && val.indexOf(' ') === -1 && val.indexOf('\'') === -1 && val.indexOf('"') === -1) {
+                                var isDuplicate = false;
+                                if (otherCompletions.length > 0) {
                                     for (var x = 0; x < otherCompletions.length; x++) {
                                         if (otherCompletions[x].value.toString() === val) {
                                             isDuplicate = true;
@@ -707,7 +716,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                                         }
                                     }
                                 }
-                                if(!isDuplicate){
+                                if (!isDuplicate) {
                                     otherCompletions.push({
                                         meta: 'localString',
                                         name: val,
@@ -720,10 +729,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
             }
-            
+
             //now merge other completions with tern (tern has priority)
             //tested on 5,000 line doc with all other completions and takes about ~10ms
-            if(otherCompletions.length>0){
+            if (otherCompletions.length > 0) {
                 var mergedCompletions = ternCompletions.slice(); //copy array
                 for (var n = 0; n < otherCompletions.length; n++) {
                     var b = otherCompletions[n];
@@ -741,18 +750,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 ternCompletions = mergedCompletions.slice();
             }
             //#endregion
-    
-    
+
+
             //callback goes to the lang tools completor
             callback(null, ternCompletions);
-    
+
             var tooltip = null;
             //COMEBACK: also need to bind popup close and update (update likely means when the tooltip has to move) (and hoever over items should move tooltip)
-    
+
             if (!bindPopupSelect()) {
                 popupSelectionChanged(); //call once if popupselect bound exited to show tooltip for first item
             }
-    
+
             //binds popup selection change, which cant be done until first time popup is created
             function bindPopupSelect() {
                 if (popupSelectBound) {
@@ -770,7 +779,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 popupSelectBound = true; //prevent rebinding
             }
             //fired on popup selection change
-    
+
             function popupSelectionChanged() {
                 closeAllTips(); //remove(tooltip); //using close all , but its slower, comeback and remove single if its working right
                 //gets data of currently selected completion
@@ -788,13 +797,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-    
+
     /**
      * shows type info
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
-        ts.request(editor, "type", function (error, data) {
+        if (!inJavascriptMode(editor)) {
+            return;
+        }
+        ts.request(editor, "type", function(error, data) {
             var tip = '';
             if (error) {
                 if (calledFromCursorActivity) {
@@ -831,7 +843,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
                 }
             }
-            tempTooltip(editor, tip, -1);
+            var place = getCusorPosForTooltip(editor);
+            makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
         }, pos);
     }
 
@@ -839,7 +852,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * gets cursor posistion for opening tooltip below the cusor.
      * @returns {object} - {top:number, left:number)
      */
-    function getCusorPosForTooltip(editor){
+    function getCusorPosForTooltip(editor) {
         //there is likely a better way to do this...
         var place = editor.renderer.$cursorLayer.getPixelPosition(); //this gets left correclty, but not top if there is scrolling
         place.top = editor.renderer.$cursorLayer.cursors[0].offsetTop; //this gets top correctly regardless of scrolling, but left is not correct
@@ -851,9 +864,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             top: place.top + 17
         };
     }
-        
-    
-    
+
 
     //#region ArgHints
 
@@ -904,8 +915,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                         //Make sure this is not in a comment or start of a if statement
                         var token = editor.session.getTokenAt(row, col);
-                        if(token){
-                            if(token.type.toString().indexOf('comment') !== -1 || token.type ==='keyword'){
+                        if (token) {
+                            if (token.type.toString().indexOf('comment') !== -1 || token.type === 'keyword') {
                                 break;
                             }
                         }
@@ -982,7 +993,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //get cursor location- there is likely a better way to do this...
         var place = getCusorPosForTooltip(editor);
-        ts.activeArgHints = makeTooltip(place.left, place.top , tip);
+        ts.activeArgHints = makeTooltip(place.left, place.top, tip);
 
         /*   COMEBACK-- add remove tip on scroll
             //added by morgan
@@ -995,9 +1006,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
             editor.on("scroll", clear);
             */
-            
+
     }
-    
+
 
     function parseFnType(text) {
         var args = [],
@@ -1083,6 +1094,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
     }
 
+    //TODO- not converted yet!
     function tempTooltip(cm, content, int_timeout) {
         alert('need to implement tempTooltip');
         return;
@@ -1105,12 +1117,31 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         cm.on("cursorActivity", clear);
         cm.on("scroll", clear);
     }
-
-    function makeTooltip(x, y, content) {
+    /**
+     * Makes a tooltip to show extra info in the editor
+     * @param {number} x - x coordinate (relative to document)
+     * @param {number} y - y coordinate (relative to document)
+     * @param {element} content
+     * @param {ace.editor} [editor] - must pass editor if closeOnCusorActivity=true to bind event
+     * @param {bool} [closeOnCusorActivity=false] - pass true to bind next cursor activty to destroy this tooltip
+     */
+    function makeTooltip(x, y, content, editor, closeOnCusorActivity) {
         var node = elt("div", cls + "tooltip", content);
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
+        if (closeOnCusorActivity === true) {
+            if (!editor) {
+                throw Error('tern.makeTooltip called with closeOnCursorActivity=true but editor was not passed. Need to pass editor!');
+            }
+            //close tooltip and unbind
+            var closeThisTip = function() {
+                if (!node.parentNode) return;//not sure what this is for, its from CM
+                remove(node);
+                editor.getSession().selection.off('changeCursor', closeThisTip);
+            };
+            editor.getSession().selection.on('changeCursor', closeThisTip);
+        }
         return node;
     }
 
@@ -1363,7 +1394,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     }
 
 
-
     function startsWith(str, token) {
         return str.slice(0, token.length).toUpperCase() == token.toUpperCase();
     }
@@ -1470,12 +1500,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             });*/
             var self = this;
             this.sandboxFrame = document.getElementById('sandboxFrame');
-            this.postMessage = function (message) {
-                this.sandboxFrame.contentWindow.postMessage(message, '*');//2nd param allows any origin
+            this.postMessage = function(message) {
+                this.sandboxFrame.contentWindow.postMessage(message, '*'); //2nd param allows any origin
             }
             this.onmessage = null;
             this.error = null;
-            window.addEventListener('message', function (event) {
+            window.addEventListener('message', function(event) {
                 if (typeof self.onmessage === 'function') {
                     self.onmessage(event);
                 }
