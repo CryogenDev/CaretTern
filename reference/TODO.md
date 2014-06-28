@@ -5,3 +5,10 @@
 - find a way to update jshint options for entire project, the state.maxerrors default is 100, and its way too low
 - Add find refs
 - add caching of auto show type so it doesnt have to keep calling tern for type info (just like arg hints)
+-
+
+
+##Things to Remember
+
+1. editor.ternServer.options.plugins.requirejs ={"baseURL": "./", "paths": {}}
+2./* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */

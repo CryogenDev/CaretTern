@@ -134,7 +134,11 @@ function(require, exports, module) {
     var aceTs = new TernServer({
         defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
-            doc_comment: true
+            doc_comment: true,
+            requirejs: {
+                "baseURL": "./",
+                "paths": {}
+            },
         },
         workerScript: ace.config.moduleUrl('worker/tern'),
         useWorker: true,

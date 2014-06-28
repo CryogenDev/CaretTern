@@ -40,5 +40,11 @@
     "emulateVim": false,
 
     //Whether to show the "New file" tab button on the tab bar;
-    "showNewTabButton": false
+    "showNewTabButton": false,
+    
+    //terns requireJS plugin
+    "ternRequireJS": {
+        "baseURL": "./",
+        "paths": {}
+    }
 }

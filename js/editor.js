@@ -1,7 +1,6 @@
-/* jshint laxcomma: false, unused: true, laxbreak:false, maxerr: 10000 */
+/* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
 
 define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
-
 
     //#region Default
     /*
@@ -50,6 +49,15 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                     enableSnippets: userConfig.autocomplete,
                     enableBasicAutocompletion: userConfig.autocomplete
                 });
+                //TODO- make tern read this from a config file per project
+                try {
+                    if (editor.ternServer) {
+                        editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
+                    }
+                }
+                catch (ex) {
+                    alert('error setting ternRequireJS: ' + ex.toString());
+                }
             });
         });
     };
