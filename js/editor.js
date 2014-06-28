@@ -53,6 +53,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 try {
                     if (editor.ternServer) {
                         editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
+                     /* temp disabled because it screws up other things...
+                     editor.ternServer.options.getFile = function(name, callback){
+                            require(["ui/projectManager"], function(projectManager){
+                               projectManager.readFile(name, callback);
+                            });
+                        }*/;
                     }
                 }
                 catch (ex) {

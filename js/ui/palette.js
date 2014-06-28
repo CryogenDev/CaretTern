@@ -463,6 +463,9 @@ define([
     palette.activate(mode);
   });
   
+  window.palette = palette;
+  console.log('window.palette');
+  
   return palette;
   
 });

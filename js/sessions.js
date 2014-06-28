@@ -26,7 +26,7 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
         else {
             mode = session.syntaxMode;
         }
-        
+
         syntax.value = mode;
     });
 
@@ -90,8 +90,7 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
     command.on("init:restart", reset);
 
     var locationMemory = null;
-
-    return {
+    var result = {
         addFile: addRemove.add,
         addDefaultsFile: function(name) {
             Settings.load(name, function() {
@@ -140,6 +139,10 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
             editor.moveCursorToPosition(locationMemory.cursor);
         },
         renderTabs: renderTabs
-    }
+    };
+    
+    window.sessions = result;
+    console.log('window.sessions');
+    return result;
 
 });

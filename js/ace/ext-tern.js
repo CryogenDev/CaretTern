@@ -83,7 +83,7 @@ function(require, exports, module) {
         });
     };
     //#endregion
-
+    
 
     //#region AutoComplete
 
@@ -157,7 +157,7 @@ function(require, exports, module) {
         debounce_ternShowType = setTimeout(function() {
             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
         }, 100);
-        
+
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
 
@@ -344,7 +344,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     TernServer.prototype = {
         bindAceKeys: function(editor) {
-            for(var p in aceCommands){
+            for (var p in aceCommands) {
                 var obj = aceCommands[p];
                 editor.commands.addCommand(obj);
             }
@@ -457,6 +457,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     //#region TernServerPrivate
 
     /**
+     * gets file (called by requirejs plugin and possibly other places)
+     */
+    function getFile(ts, name, cb) {
+        //DBG(arguments,true); - example : util/dom2.js
+        console.log('getFile - name:',name);
+        var buf = ts.docs[name];
+        if (buf) cb(docValue(ts, buf));
+        else if (ts.options.getFile) ts.options.getFile(name, cb);
+        else cb(null);
+    }
+
+    /**
      * Finds document on the tern server
      * @param {TernServer} ts
      * @param  doc -(in CM, this is a CM doc object)
@@ -529,7 +541,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         query.lineCharPositions = true;
         //build the query start and end based on current cusor location of editor
-        
+
         //NOTE: DO NOT use '===' for query.end == null below as it returns a different result!
         if (query.end == null) { //this is null for get completions
             var currentSelection = doc.doc.getSelectionRange(); //returns range: start{row,column}, end{row,column}
@@ -683,12 +695,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             types: true,
             origins: true,
             docs: true,
-            filter: false
+            filter: false,
+            omitObjectPrototype: false,
+            sort: false,
+            includeKeywords: true,
+            guess: true,
         },
 
         function(error, data) {
             if (error) {
-                return showError(ts,editor, error);
+                return showError(ts, editor, error);
             }
             //map ternCompletions to correct format
             var ternCompletions = data.completions.map(function(item) {
@@ -707,6 +723,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
             //#region OtherCompletions
             var otherCompletions = [];
+            //DISABLED-- using keywords from tern!
             //if basic auto completion is on, then get keyword completions that are not found in tern results
             if (editor.getOption('enableBasicAutocompletion') === true) {
                 try {
@@ -716,7 +733,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-
+        
+            
             //add local string completions if enabled, this is far more useful than the local text completions
             // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
             var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
@@ -824,7 +842,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
-        if(calledFromCursorActivity){ //check if currently in call, if so, then exit
+        if (calledFromCursorActivity) { //check if currently in call, if so, then exit
             try { //throws error if no popup
                 if (editor.completer.popup.isOpen) {
                     return;
@@ -838,16 +856,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
                 return; //something is selected
             }
-            var tok = getCurrentToken(ts,editor);
-            if(!tok){
+            var tok = getCurrentToken(ts, editor);
+            if (!tok) {
                 return;
             }
             //function definition
-            if(tok.type.indexOf('entity.name.function') !== -1){
+            if (tok.type.indexOf('entity.name.function') !== -1) {
                 return;
             }
             // could be 'function', which is start of an anon fn
-            if(tok.type.indexOf('storage.type') !== -1){
+            if (tok.type.indexOf('storage.type') !== -1) {
                 return;
             }
         }
@@ -892,12 +910,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
-            setTimeout(function(){
+            setTimeout(function() {
                 var place = getCusorPosForTooltip(editor);
                 // console.log('place',place);
                 // setTimeout(function(){console.log('place after 1ms', getCusorPosForTooltip(editor));},1);
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
-            },10);
+            }, 10);
         }, pos);
     }
 
@@ -921,22 +939,22 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Gets token at current cursor posistion. Returns null if none
      */
-    function getCurrentToken(ts,editor){
-        try{
+    function getCurrentToken(ts, editor) {
+        try {
             var pos = editor.getSelectionRange().end;
             return editor.session.getTokenAt(pos.row, pos.column);
         }
-        catch(ex){
-            showError(ts,editor,ex);
+        catch (ex) {
+            showError(ts, editor, ex);
         }
     }
 
     //#region ArgHints
-    
+
     /**
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
      */
-    function getCallPos(ts,editor){
+    function getCallPos(ts, editor) {
         if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
             return; //something is selected
         }
@@ -1005,18 +1023,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             "argpos": argpos
         }; //convert
     }
-    
+
     /**
      * Gets if editor is currently in call posistion
      */
-    function isInCall(ts,editor){
+    function isInCall(ts, editor) {
         var callPos = getCallPos(ts, editor);
         if (callPos) {
             return true;
         }
         return false;
     }
-    
+
     /**
      * If editor is currently inside of a function call, this will try to get definition of the function that is being called, if successfull will show tooltip about arguments for the function being called.
      * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
@@ -1024,13 +1042,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function updateArgHints(ts, editor) {
         closeArgHints(ts);
         //ADD
-        var callPos = getCallPos(ts,editor);
-        if(!callPos ){
+        var callPos = getCallPos(ts, editor);
+        if (!callPos) {
             return;
         }
         var start = callPos.start;
         var argpos = callPos.argpos;
-        
+
         //check for arg hints for the same call start, if found, then use them but update the argPos (occurs when moving between args in same call)
         var cache = ts.cachedArgHints;
         if (cache && cache.doc == editor && cmpPos(start, cache.start) === 0) {
@@ -1045,7 +1063,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }, function(error, data) {
             if (error) {
                 //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
-                if(error.toString().toLowerCase().indexOf('no expression at the given position') ===-1){
+                if (error.toString().toLowerCase().indexOf('no expression at the given position') === -1) {
                     return showError(ts, editor, error);
                 }
             }
@@ -1087,7 +1105,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //get cursor location- there is likely a better way to do this...
         var place = getCusorPosForTooltip(editor);
-        ts.activeArgHints = makeTooltip(place.left, place.top, tip,editor,true);//note: this closes on scroll and cursor activity, so the closeArgHints call at the top of this wont need to remove the tip
+        ts.activeArgHints = makeTooltip(place.left, place.top, tip, editor, true); //note: this closes on scroll and cursor activity, so the closeArgHints call at the top of this wont need to remove the tip
     }
 
 
@@ -1180,11 +1198,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //TODO- not converted yet!
     function tempTooltip(editor, content, int_timeout) {
-         if (!int_timeout) {
+        if (!int_timeout) {
             int_timeout = 3000;
         }
         var location = getCusorPosForTooltip(editor);
-        makeTooltip(location.left, location.top, content,editor, true, int_timeout);
+        makeTooltip(location.left, location.top, content, editor, true, int_timeout);
     }
     /**
      * Makes a tooltip to show extra info in the editor
@@ -1200,7 +1218,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
-    
+
         if (closeOnCusorActivity === true) {
             if (!editor) {
                 throw Error('tern.makeTooltip called with closeOnCursorActivity=true but editor was not passed. Need to pass editor!');
@@ -1214,10 +1232,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.getSession().off('changeScrollLeft', closeThisTip);
             };
             editor.getSession().selection.on('changeCursor', closeThisTip);
-            editor.getSession().on('changeScrollTop',closeThisTip);
-            editor.getSession().on('changeScrollLeft',closeThisTip);
+            editor.getSession().on('changeScrollTop', closeThisTip);
+            editor.getSession().on('changeScrollLeft', closeThisTip);
         }
-      
+
         if (fadeOutDuration) {
             fadeOutDuration = parseInt(fadeOutDuration, 10);
             if (fadeOutDuration > 100) {
@@ -1262,30 +1280,30 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * Shows error
      * @param {bool} [noPopup=false] - pass true to log error without showing popUp tooltip with error
      */
-    function showError(ts,editor, msg, noPopup) {
-        try{
-            log('ternError',msg);
-            if(!noPopup){
-                var el = elt('span',null,msg);
-                el.style.color='red';
+    function showError(ts, editor, msg, noPopup) {
+        try {
+            log('ternError', msg);
+            if (!noPopup) {
+                var el = elt('span', null, msg);
+                el.style.color = 'red';
                 tempTooltip(editor, el);
                 //tempTooltip(editor, msg.toString());
             }
-            
-           /* if (msg && msg.constructor.name === 'Error') {
+
+            /* if (msg && msg.constructor.name === 'Error') {
                 
                 console.log('ternError', msg);
                 return;
             }
             console.log(new Error('ternError: ' + msg));*/
         }
-        catch(ex){
-           setTimeout(function() {
-            throw new Error('tern show error failed.' + msg +'\n\n fail error:' + ex);
-        }, 0);
+        catch (ex) {
+            setTimeout(function() {
+                throw new Error('tern show error failed.' + msg + '\n\n fail error:' + ex);
+            }, 0);
         }
-		//DBG(arguments,true);
-		
+        //DBG(arguments,true);
+
         //console.log('tern error', new Error('tern error: ' + msg));
         /* dont like this method as it prevents stack trace
         setTimeout(function() {
@@ -1343,7 +1361,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         });
         else inner();
     }
-    
+
     /**
      * Jumps back to previous posistion after using JumpTo
      */
@@ -1353,12 +1371,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!doc) return;
         moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
-    
+
     /**
      * Moves editor to a location (or a location in another document)
      */
     function moveTo(ts, curDoc, doc, start, end) {
-        curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0);//this will make sure that the line is expanded
+        curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0); //this will make sure that the line is expanded
         var sel = curDoc.doc.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
         sel.setSelectionRange({
             start: toAceLoc(start),
@@ -1399,7 +1417,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //COMEBACK--- need to use editor.find LEFTOFF
         console.log(new Error('This part is not complete, need to implement using Ace\'s search functionality'));
-        console.log('data.context',data.context);
+        console.log('data.context', data.context);
         var cursor = editor.getSearchCursor(data.context, 0, false);
         var nearest, nearestDist = Infinity;
         while (cursor.findNext()) {
@@ -1422,7 +1440,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: end
         };
     }
-    
+
     /**
      * (not exactly sure) Coverted=true
      */
