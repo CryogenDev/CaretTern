@@ -341,7 +341,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
     };
 
-
     TernServer.prototype = {
         bindAceKeys: function(editor) {
             for (var p in aceCommands) {
@@ -399,32 +398,32 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-
+    
         getHint: function(cm, c) {
             return hint(this, cm, c);
         },
-
+    
         showType: function(cm, pos, calledFromCursorActivity) {
             showType(this, cm, pos, calledFromCursorActivity);
         },
-
+    
         updateArgHints: function(cm) {
             // console.log('update arg hints',cm);
             updateArgHints(this, cm);
         },
-
+    
         jumpToDef: function(cm) {
             jumpToDef(this, cm);
         },
-
+    
         jumpBack: function(cm) {
             jumpBack(this, cm);
         },
-
+    
         rename: function(cm) {
             rename(this, cm);
         },
-
+    
         selectName: function(cm) {
             selectName(this, cm);
         },
@@ -436,7 +435,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos);
-
+    
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -447,10 +446,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         enabledAtCurrentLocation: function(editor) {
             return inJavascriptMode(editor);
+        },
+        /**
+         * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
+         * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
+         */
+        getCallPos: function(editor, pos) {
+            return getCallPos(editor, pos);
         }
     };
 
     exports.TernServer = TernServer;
+    
     //#endregion
 
 
@@ -836,15 +843,35 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
+    
 
     /**
      * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
      * @returns bool
      */
-    function isOnFunctionCall(ts,editor){
+    function isOnFunctionCall(editor){
         if (!inJavascriptMode(editor)) return false;
         if (somethingIsSelected(editor)) return false;
         if (isInCall(editor)) return false;
+    
+        var tok = getCurrentToken(ts, editor);
+        if (!tok) return; //No token at current location
+        if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
+        if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
+        if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
+        
+        //check if
+        /*var start = {
+            row: editor.getSelectionRange().end,
+            column: tok.start + tok.value.length + 1
+        };
+        var pos = editor.getSelectionRange().end;*/
+        
+        //check if next token after this one is open parenthesis
+        var nextTok =editor.session.getTokenAt(pos.row, (tok.start + tok.value.length + 1));
+        if(!nextTok || nextTok.value !== "(") return false;
+        
+        return true;
     }
     
     /**
@@ -866,18 +893,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
             catch (ex) {}
-            
-
-            var tok = getCurrentToken(ts, editor);
-            
-            //No token at current location
-            if (!tok) return;
-            
-            //function definition
-            if (tok.type.indexOf('entity.name.function') !== -1) return;
-            
-            // could be 'function', which is start of an anon fn
-            if (tok.type.indexOf('storage.type') !== -1) return;
+            if(!isOnFunctionCall(editor)) return;
         }
         if (!inJavascriptMode(editor)) {
             return;
@@ -964,12 +980,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     /**
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
+     * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      */
-    function getCallPos(editor) {
+    function getCallPos(editor, pos) {
         if (somethingIsSelected(editor)) return;
         if (!inJavascriptMode(editor)) return;
         var start = {}; //start of query to tern (start of the call location)
-        var currentPosistion = editor.getSelectionRange().start; //{row,column}
+        var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
+        currentPosistion = toAceLoc(currentPosistion);//just in case
         var currentLine = currentPosistion.row;
         var currentCol = currentPosistion.column;
         var firstLineToCheck = Math.max(0, currentLine - 6);
@@ -1033,9 +1051,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     /**
      * Gets if editor is currently in call posistion
+     *  @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      */
-    function isInCall(editor) {
-        var callPos = getCallPos(editor);
+    function isInCall(editor, pos) {
+        var callPos = getCallPos(editor,pos);
         if (callPos) {
             return true;
         }
