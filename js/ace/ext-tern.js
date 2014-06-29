@@ -156,7 +156,7 @@ function(require, exports, module) {
         clearTimeout(debounce_ternShowType);
         debounce_ternShowType = setTimeout(function() {
             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
-        }, 100);
+        }, 500);
 
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
@@ -844,7 +844,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         });
     }
     
-
     /**
      * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
      * @returns bool
@@ -854,21 +853,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (somethingIsSelected(editor)) return false;
         if (isInCall(editor)) return false;
     
-        var tok = getCurrentToken(ts, editor);
+        var tok = getCurrentToken(editor);
         if (!tok) return; //No token at current location
         if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
         if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
         if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
         
-        //check if
-        /*var start = {
-            row: editor.getSelectionRange().end,
-            column: tok.start + tok.value.length + 1
-        };
-        var pos = editor.getSelectionRange().end;*/
-        
         //check if next token after this one is open parenthesis
-        var nextTok =editor.session.getTokenAt(pos.row, (tok.start + tok.value.length + 1));
+        var nextTok =editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
         if(!nextTok || nextTok.value !== "(") return false;
         
         return true;
@@ -895,8 +887,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             catch (ex) {}
             if(!isOnFunctionCall(editor)) return;
         }
-        if (!inJavascriptMode(editor)) {
-            return;
+        else{//run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
+            if (!inJavascriptMode(editor)) {
+                return;
+            }
         }
         ts.request(editor, "type", function(error, data) {
             var tip = '';
@@ -912,10 +906,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             else {
                 //cursor activity
                 if (calledFromCursorActivity) {
+                    if(data.hasOwnProperty('guess') && data.guess ===true) return;//dont show guesses on auto activity as they are not accurate
                     if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)") {
                         return;
                     }
-                    // logO(data, 'data');
+                    //logO(data, 'data');
                 }
                 tip = elt("span", null, elt("strong", null, data.type || "not found"));
                 if (data.doc) {
@@ -965,7 +960,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Gets token at current cursor posistion. Returns null if none
      */
-    function getCurrentToken(ts, editor) {
+    function getCurrentToken(editor) {
         try {
             var pos = editor.getSelectionRange().end;
             return editor.session.getTokenAt(pos.row, pos.column);
