@@ -12,3 +12,9 @@
 
 1. editor.ternServer.options.plugins.requirejs ={"baseURL": "./", "paths": {}}
 2./* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
+
+
+#shortterm todo
+1. add hotkey to turn auto show type on/off
+2. make auto show type have better algorithim
+3. context menu

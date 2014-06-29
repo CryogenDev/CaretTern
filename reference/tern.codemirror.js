@@ -534,7 +534,7 @@
 
     // The {line,ch} representation of positions makes this rather awkward.
     function findContext(doc, data) {
-        // logO(doc, 'doc'); logO(data, 'data');
+        
         var before = data.context.slice(0, data.contextOffset).split("\n");
         var startLine = data.start.line - (before.length - 1);
         var start = Pos(startLine, (before.length == 1 ? data.start.ch : doc.getLine(startLine).length) - before[0].length);
@@ -543,9 +543,9 @@
         for (var cur = startLine + 1; cur < doc.lineCount() && text.length < data.context.length; ++cur)
             text += "\n" + doc.getLine(cur);
         if (text.slice(0, data.context.length) == data.context) return data;
-
+        
         var cursor = doc.getSearchCursor(data.context, 0, false);
-        logO(cursor, 'cursor');
+        
         var nearest, nearestDist = Infinity;
         while (cursor.findNext()) {
             var from = cursor.from(),
