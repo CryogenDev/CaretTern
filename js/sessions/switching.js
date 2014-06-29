@@ -27,8 +27,8 @@ define(["sessions/state", "editor", "command"], function(state, editor, command)
             return t != raised
         });
         state.stack.unshift(raised);
-    }
-
+    };
+    
     var watchCtrl = function(e) {
         if (e.keyCode == 17) {
             resetStack();
@@ -72,6 +72,10 @@ define(["sessions/state", "editor", "command"], function(state, editor, command)
         var tab = state.tabs[index];
         raiseTab(tab);
         resetStack(tab);
+        try{//close any open tabs
+            editor.ternServer.closeAllTips();
+        }
+        catch(ex){}
     });
     command.on("session:change-tab", switchTab);
     command.on("session:change-tab-linear", switchTabLinear);

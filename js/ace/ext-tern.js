@@ -1,4 +1,4 @@
-/*jshint maxerr: 10000 */
+/*jshint maxerr:10000 */
 
 /**
  * Ace Tern server configuration (uses worker in separate file)
@@ -447,6 +447,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         enabledAtCurrentLocation: function(editor) {
             return inJavascriptMode(editor);
+        },
+        /**
+         * closes any open tern tooltips
+         */
+        closeAllTips: function(){
+            closeAllTips();
         }
     };
 
@@ -947,6 +953,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         catch (ex) {
             showError(ts, editor, ex);
         }
+    }
+
+    /**
+     * gets tokens at current line (start of selection, not tested when text is selected)
+     */
+    function getCurrentLineTokens(ts,editor){
+        return editor.session.getTokens(editor.getSelectionRange().start.row);
     }
 
     //#region ArgHints
