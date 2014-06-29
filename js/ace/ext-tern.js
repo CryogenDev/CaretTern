@@ -1,4 +1,4 @@
-/*jshint maxerr:10000 */
+/*jshint maxerr: 10000 */
 
 /**
  * Ace Tern server configuration (uses worker in separate file)
@@ -156,7 +156,7 @@ function(require, exports, module) {
         clearTimeout(debounce_ternShowType);
         debounce_ternShowType = setTimeout(function() {
             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
-        }, 100);
+        }, 300);
 
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
@@ -341,7 +341,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
     };
 
-
     TernServer.prototype = {
         bindAceKeys: function(editor) {
             for (var p in aceCommands) {
@@ -399,32 +398,32 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-
+    
         getHint: function(cm, c) {
             return hint(this, cm, c);
         },
-
+    
         showType: function(cm, pos, calledFromCursorActivity) {
             showType(this, cm, pos, calledFromCursorActivity);
         },
-
+    
         updateArgHints: function(cm) {
             // console.log('update arg hints',cm);
             updateArgHints(this, cm);
         },
-
+    
         jumpToDef: function(cm) {
             jumpToDef(this, cm);
         },
-
+    
         jumpBack: function(cm) {
             jumpBack(this, cm);
         },
-
+    
         rename: function(cm) {
             rename(this, cm);
         },
-
+    
         selectName: function(cm) {
             selectName(this, cm);
         },
@@ -436,7 +435,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos);
-
+    
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -449,14 +448,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             return inJavascriptMode(editor);
         },
         /**
-         * closes any open tern tooltips
+         * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
+         * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
          */
-        closeAllTips: function(){
-            closeAllTips();
+        getCallPos: function(editor, pos) {
+            return getCallPos(editor, pos);
         }
     };
 
     exports.TernServer = TernServer;
+    
     //#endregion
 
 
@@ -695,7 +696,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
-
+        
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -842,6 +843,35 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
+    
+    /**
+     * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
+     * @returns bool
+     */
+    function isOnFunctionCall(editor){
+        if (!inJavascriptMode(editor)) return false;
+        if (somethingIsSelected(editor)) return false;
+        if (isInCall(editor)) return false;
+    
+        var tok = getCurrentToken(editor);
+        if (!tok) return; //No token at current location
+        if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
+        if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
+        if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
+        
+        //check if next token after this one is open parenthesis
+        var nextTok =editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
+        if(!nextTok || nextTok.value !== "(") return false;
+        
+        return true;
+    }
+    
+    /**
+     * Returns true if something is selected in the editor (meaning more than 1 character)
+     */
+    function somethingIsSelected(editor){
+         return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
+    }
 
     /**
      * shows type info
@@ -855,28 +885,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
             catch (ex) {}
-            var callPos = getCallPos(ts, editor);
-            if (callPos) {
-                return;
-            }
-            if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
-                return; //something is selected
-            }
-            var tok = getCurrentToken(ts, editor);
-            if (!tok) {
-                return;
-            }
-            //function definition
-            if (tok.type.indexOf('entity.name.function') !== -1) {
-                return;
-            }
-            // could be 'function', which is start of an anon fn
-            if (tok.type.indexOf('storage.type') !== -1) {
-                return;
-            }
+            if(!isOnFunctionCall(editor)) return;
         }
-        if (!inJavascriptMode(editor)) {
-            return;
+        else{//run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
+            if (!inJavascriptMode(editor)) {
+                return;
+            }
         }
         ts.request(editor, "type", function(error, data) {
             var tip = '';
@@ -892,10 +906,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             else {
                 //cursor activity
                 if (calledFromCursorActivity) {
+                    if(data.hasOwnProperty('guess') && data.guess ===true) return;//dont show guesses on auto activity as they are not accurate
                     if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)") {
                         return;
                     }
-                    // logO(data, 'data');
+                    //logO(data, 'data');
                 }
                 tip = elt("span", null, elt("strong", null, data.type || "not found"));
                 if (data.doc) {
@@ -945,7 +960,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Gets token at current cursor posistion. Returns null if none
      */
-    function getCurrentToken(ts, editor) {
+    function getCurrentToken(editor) {
         try {
             var pos = editor.getSelectionRange().end;
             return editor.session.getTokenAt(pos.row, pos.column);
@@ -954,28 +969,20 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             showError(ts, editor, ex);
         }
     }
-
-    /**
-     * gets tokens at current line (start of selection, not tested when text is selected)
-     */
-    function getCurrentLineTokens(ts,editor){
-        return editor.session.getTokens(editor.getSelectionRange().start.row);
-    }
+    
 
     //#region ArgHints
 
     /**
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
+     * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      */
-    function getCallPos(ts, editor) {
-        if (editor.getSession().getTextRange(editor.getSelectionRange()) !== '') {
-            return; //something is selected
-        }
-        if (!inJavascriptMode(editor)) {
-            return; //javascript mode only (need to comeback to make work while in javascipt inside of html)
-        }
+    function getCallPos(editor, pos) {
+        if (somethingIsSelected(editor)) return;
+        if (!inJavascriptMode(editor)) return;
         var start = {}; //start of query to tern (start of the call location)
-        var currentPosistion = editor.getSelectionRange().start; //{row,column}
+        var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
+        currentPosistion = toAceLoc(currentPosistion);//just in case
         var currentLine = currentPosistion.row;
         var currentCol = currentPosistion.column;
         var firstLineToCheck = Math.max(0, currentLine - 6);
@@ -1039,9 +1046,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     /**
      * Gets if editor is currently in call posistion
+     *  @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      */
-    function isInCall(ts, editor) {
-        var callPos = getCallPos(ts, editor);
+    function isInCall(editor, pos) {
+        var callPos = getCallPos(editor,pos);
         if (callPos) {
             return true;
         }
@@ -1055,7 +1063,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function updateArgHints(ts, editor) {
         closeArgHints(ts);
         //ADD
-        var callPos = getCallPos(ts, editor);
+        var callPos = getCallPos(editor);
         if (!callPos) {
             return;
         }
@@ -1336,7 +1344,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region JumpTo
 
-    // NOT CONVERTED
+    /**
+     * jumps to definition of a function or variable where the cursor is currently located
+     */
     function jumpToDef(ts, editor) {
         function inner(varName) {
             var req = {
@@ -1362,6 +1372,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             end: toTernLoc(editor.getSelectionRange().end) //editor.getCursor("to")
                         });
                         moveTo(ts, doc, localDoc, found.start, found.end);
+                        // moveTo(ts, doc, localDoc, found.start, found.end);
                         return;
                     }
                 }
@@ -1387,6 +1398,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     /**
      * Moves editor to a location (or a location in another document)
+     * @param start - cursor location (can be tern or ace location as it will auto convert)
+     * @param end - cursor location (can be tern or ace location as it will auto convert)
      */
     function moveTo(ts, curDoc, doc, start, end) {
         curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0); //this will make sure that the line is expanded
@@ -1414,21 +1427,31 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Dont know what this does yet...
      * Marijnh's comment: The {line,ch} representation of positions makes this rather awkward.
-     * @param {object} data - contains documentation for function, start, end, file, context, contextOffset, origin
+     * @param {object} data - contains documentation for function, start (ch,line), end(ch,line), file, context, contextOffset, origin
      */
     function findContext(editor, data) {
-        // logO(editor, 'editor'); logO(data, 'data');
-        //DBG(arguments, true);
         var before = data.context.slice(0, data.contextOffset).split("\n");
         var startLine = data.start.line - (before.length - 1);
-        var start = Pos(startLine, (before.length == 1 ? data.start.ch : editor.session.getLine(startLine).length) - before[0].length);
+        var ch = null;
+        if(before.length ==1){
+            ch = data.start.ch;
+        }
+        else{
+            ch = editor.session.getLine(startLine).length - before[0].length;
+        }
+        var start = Pos(startLine,ch);
 
         var text = editor.session.getLine(startLine).slice(start.ch);
-        for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur)
-        text += "\n" + editor.session.getLine(cur);
-        if (text.slice(0, data.context.length) == data.context) return data;
+        for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur){
+            text += "\n" + editor.session.getLine(cur);
+        }
+        // if (text.slice(0, data.context.length) == data.context)
+        // NOTE: this part is commented out and always returns data
+        // because there is a bug that is causing it to miss by one char
+        // and I dont know when the part below would ever be needed (I guess we will find out when it doesnt work)
+        return data;
 
-        //COMEBACK--- need to use editor.find LEFTOFF
+        //COMEBACK--- need to use editor.find.... NOT IN USE RIGHT NOW... need to fix!
         console.log(new Error('This part is not complete, need to implement using Ace\'s search functionality'));
         console.log('data.context', data.context);
         var cursor = editor.getSearchCursor(data.context, 0, false);
