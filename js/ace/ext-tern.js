@@ -707,6 +707,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             sort: false,
             includeKeywords: true,
             guess: true,
+            expandWordForward:true
         },
 
         function(error, data) {
@@ -730,7 +731,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
             //#region OtherCompletions
             var otherCompletions = [];
-            //DISABLED-- using keywords from tern!
             //if basic auto completion is on, then get keyword completions that are not found in tern results
             if (editor.getOption('enableBasicAutocompletion') === true) {
                 try {
@@ -740,7 +740,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-        
             
             //add local string completions if enabled, this is far more useful than the local text completions
             // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
@@ -879,13 +878,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
         if (calledFromCursorActivity) { //check if currently in call, if so, then exit
-            try { //throws error if no popup
-                if (editor.completer.popup.isOpen) {
-                    return;
-                }
-            }
-            catch (ex) {}
-            if(!isOnFunctionCall(editor)) return;
+            if (editor.completer && editor.completer.popup && editor.completer.popup.isOpen) return;
+            if (!isOnFunctionCall(editor)) return;
         }
         else{//run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
             if (!inJavascriptMode(editor)) {
@@ -907,7 +901,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 //cursor activity
                 if (calledFromCursorActivity) {
                     if(data.hasOwnProperty('guess') && data.guess ===true) return;//dont show guesses on auto activity as they are not accurate
-                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)") {
+                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type =="fn()") {
                         return;
                     }
                     //logO(data, 'data');
