@@ -1,6 +1,6 @@
 /* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
 
-define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
+define(["storage/file", "command", "settings!ace,user", "util/dom2", "ui/contextMenus"], function(File, command, Settings, contextMenus) {
 
     //#region Default
     /*

@@ -5,6 +5,8 @@ define(function() {
 
     //all context menus created here are handled via onClick
     var onClick = function(info) {
+        //log('info', info);
+        //this is called when context menu item is actually clicked
         var handler = registry[info.menuItemId];
         if (handler) {
             var params = handler.parse(info.linkUrl);
@@ -32,11 +34,11 @@ define(function() {
                 return "*";
             }
             return s.replace(/[\^()\[\]]/, function(match) {
-                return "\\" + match
+                return "\\" + match;
             });
         });
         var re = new RegExp(parts.map(function(s) {
-            return s == "*" ? "([^\/]+)" : s
+            return s == "*" ? "([^\/]+)" : s;
         }).join("\\/"));
         var parser = function(url) {
             var result = re.exec(url);
