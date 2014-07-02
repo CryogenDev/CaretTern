@@ -398,32 +398,32 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-    
+
         getHint: function(cm, c) {
             return hint(this, cm, c);
         },
-    
+
         showType: function(cm, pos, calledFromCursorActivity) {
             showType(this, cm, pos, calledFromCursorActivity);
         },
-    
+
         updateArgHints: function(cm) {
             // console.log('update arg hints',cm);
             updateArgHints(this, cm);
         },
-    
+
         jumpToDef: function(cm) {
             jumpToDef(this, cm);
         },
-    
+
         jumpBack: function(cm) {
             jumpBack(this, cm);
         },
-    
+
         rename: function(cm) {
             rename(this, cm);
         },
-    
+
         selectName: function(cm) {
             selectName(this, cm);
         },
@@ -435,7 +435,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos);
-    
+
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -453,11 +453,22 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         getCallPos: function(editor, pos) {
             return getCallPos(editor, pos);
+        },
+        /**
+         * (ghetto and temporary). Call this when current doc changes, it will delete all docs on the server then add current doc
+         */
+        docChanged: function(editor){
+            //delete all docs
+            for(var p in this.docs){
+                this.delDoc(p);
+            }
+            //add current doc
+            this.addDoc("current", editor);
         }
     };
 
     exports.TernServer = TernServer;
-    
+
     //#endregion
 
 
@@ -468,7 +479,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function getFile(ts, name, cb) {
         //DBG(arguments,true); - example : util/dom2.js
-        console.log('getFile - name:',name);
+        console.log('getFile - name:', name);
         var buf = ts.docs[name];
         if (buf) cb(docValue(ts, buf));
         else if (ts.options.getFile) ts.options.getFile(name, cb);
@@ -696,7 +707,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
-        
+
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -707,7 +718,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             sort: false,
             includeKeywords: true,
             guess: true,
-            expandWordForward:true
+            expandWordForward: true
         },
 
         function(error, data) {
@@ -740,7 +751,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-            
+
             //add local string completions if enabled, this is far more useful than the local text completions
             // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
             var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
@@ -842,34 +853,34 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-    
+
     /**
      * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
      * @returns bool
      */
-    function isOnFunctionCall(editor){
+    function isOnFunctionCall(editor) {
         if (!inJavascriptMode(editor)) return false;
         if (somethingIsSelected(editor)) return false;
         if (isInCall(editor)) return false;
-    
+
         var tok = getCurrentToken(editor);
         if (!tok) return; //No token at current location
         if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
         if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
         if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
-        
+
         //check if next token after this one is open parenthesis
-        var nextTok =editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
-        if(!nextTok || nextTok.value !== "(") return false;
-        
+        var nextTok = editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
+        if (!nextTok || nextTok.value !== "(") return false;
+
         return true;
     }
-    
+
     /**
      * Returns true if something is selected in the editor (meaning more than 1 character)
      */
-    function somethingIsSelected(editor){
-         return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
+    function somethingIsSelected(editor) {
+        return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
     }
 
     /**
@@ -881,7 +892,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             if (editor.completer && editor.completer.popup && editor.completer.popup.isOpen) return;
             if (!isOnFunctionCall(editor)) return;
         }
-        else{//run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
+        else { //run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
             if (!inJavascriptMode(editor)) {
                 return;
             }
@@ -900,8 +911,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             else {
                 //cursor activity
                 if (calledFromCursorActivity) {
-                    if(data.hasOwnProperty('guess') && data.guess ===true) return;//dont show guesses on auto activity as they are not accurate
-                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type =="fn()") {
+                    if (data.hasOwnProperty('guess') && data.guess === true) return; //dont show guesses on auto activity as they are not accurate
+                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type == "fn()") {
                         return;
                     }
                     //logO(data, 'data');
@@ -963,7 +974,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             showError(ts, editor, ex);
         }
     }
-    
+
 
     //#region ArgHints
 
@@ -976,7 +987,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!inJavascriptMode(editor)) return;
         var start = {}; //start of query to tern (start of the call location)
         var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
-        currentPosistion = toAceLoc(currentPosistion);//just in case
+        currentPosistion = toAceLoc(currentPosistion); //just in case
         var currentLine = currentPosistion.row;
         var currentCol = currentPosistion.column;
         var firstLineToCheck = Math.max(0, currentLine - 6);
@@ -1043,7 +1054,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      *  @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      */
     function isInCall(editor, pos) {
-        var callPos = getCallPos(editor,pos);
+        var callPos = getCallPos(editor, pos);
         if (callPos) {
             return true;
         }
@@ -1427,16 +1438,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var before = data.context.slice(0, data.contextOffset).split("\n");
         var startLine = data.start.line - (before.length - 1);
         var ch = null;
-        if(before.length ==1){
+        if (before.length == 1) {
             ch = data.start.ch;
         }
-        else{
+        else {
             ch = editor.session.getLine(startLine).length - before[0].length;
         }
-        var start = Pos(startLine,ch);
+        var start = Pos(startLine, ch);
 
         var text = editor.session.getLine(startLine).slice(start.ch);
-        for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur){
+        for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur) {
             text += "\n" + editor.session.getLine(cur);
         }
         // if (text.slice(0, data.context.length) == data.context)
@@ -1738,5 +1749,126 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
 
+    //#endregion
+
+
+    //#region GetVisualStudioRefs
+
+    //this is total ghetto and temporary, and not meant to part of the tern extension
+    function loadTernRefs() {
+        if (editor.ternServer && editor.ternServer.enabledAtCurrentLocation(editor)) {
+            var StringtoCheck = "";
+            for (var i = 0; i < editor.session.getLength(); i++) {
+                var thisLine = editor.session.getLine(i);
+                if (thisLine.substr(0, 3) === "///") {
+                    StringtoCheck += "\n" + thisLine;
+                }
+                else {
+                    break; //only top lines may be references
+                }
+            }
+            if (StringtoCheck !== '') {
+                var re = /(?!\/\/\/\s*?<reference path=")[^"]*/g;
+                var m;
+                var refs = [];
+                while ((m = re.exec(StringtoCheck)) != null) {
+                    if (m.index === re.lastIndex) {
+                        re.lastIndex++;
+                    }
+                    var r = m[0].replace('"', '');
+                    if (r.toLowerCase().indexOf('reference path') === -1 && r.trim() !== '' && r.toLowerCase().indexOf('/>') === -1) {
+                        if (r.toLowerCase().indexOf('vsdoc') === -1) { //dont load vs doc files as they are visual studio xml junk
+                            refs.push(r);
+                        }
+                    }
+                }
+                //get current path from loaded file
+                var currentPath = '';
+                try {
+                    currentPath = window.loadedFile.substring(0, window.loadedFile.lastIndexOf("\\") + 1);
+                }
+                catch (ex) {
+                    log('failed to get current file path from: ' + window.loadedFile, ex);
+                }
+                log('refs', refs, 'currentPath', currentPath, 'window.loadedFile', window.loadedFile);
+
+                //resolves path if needed (if relative)
+                var ResolvePath =function (path) {
+                    var pathPart1 = currentPath;
+                    if (path.toLowerCase().indexOf("http") !== -1) {
+                        return path;
+                    }
+                    path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
+                    while (path.substr(0, 3) === '..\\') {
+                        var t1 = pathPart1.substr(0, pathPart1.lastIndexOf("\\"));
+                        var t2 = t1.substr(0, t1.lastIndexOf("\\"));
+                        pathPart1 = t2;
+                        path = path.substring(3);
+                    }
+                    return pathPart1 + "\\" + path;
+                };
+                //reads file and adds to tern
+                 var ReadFile_AddToTern= function(name, path) {
+                    if (path.toLowerCase().indexOf("http") !== -1) {
+                        var http = require('http');
+                        //downloads file and fires callback whend one
+                        var downloadFile= function(url, dest, cb) {
+                            var file = fs.createWriteStream(dest);
+                            var request = http.get(url, function(response) {
+                                response.pipe(file);
+                                file.on('finish', function() {
+                                    file.close(cb);
+                                });
+                            });
+                        };
+                        //generate temp file name
+                        var tempFileName = "TEMP_" + Math.random().toString(36).slice(2) + ".js";
+
+                        //download file to temp directory
+                        downloadFile(path, tempFileName, function() {
+                            //download file complete, now read it and add to tern
+                            fs.readFile(tempFileName, function(err, data) {
+                                if (err) {
+                                    log('error getting file: ' + path, err);
+                                }
+                                else {
+                                    log({
+                                        stack: false,
+                                        time: false
+                                    }, 'adding ' + name + ' to tern (' + path + ')');
+                                    editor.ternServer.addDoc(name, data.toString());
+                                }
+                                //now delete the temp file
+                                fs.unlink(tempFileName);
+                            });
+                        });
+                    }
+                    else { //local
+                        fs.readFile(thisPath, function(err, data) {
+                            if (err) {
+                                log('error getting file: ' + path, err);
+                            }
+                            else {
+                                log({
+                                    stack: false,
+                                    time: false
+                                }, 'adding ' + name + ' to tern (' + path + ')');
+                                editor.ternServer.addDoc(name, data.toString());
+                            }
+                        });
+                    }
+                };
+                //load each file
+                for (var i = 0; i < refs.length; i++) {
+                    var thisPath = ResolvePath(refs[i]);
+                    var name = thisPath.replace(/^.*[\\\/]/, '');
+                    ReadFile_AddToTern(name, thisPath);
+                }
+            }
+        }
+        else {
+            log('tern not enabled at current location');
+        }
+    }
     //#endregion
 });

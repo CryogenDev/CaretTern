@@ -1,3 +1,8 @@
+
+#LEFT OFF
+
+-- tern. added public method docChanged... find the binding i already put in place to reset tern whe tab changes and add this... then add the auto get VS refs
+
 #TODO list
 
 - Add context menus for ace, contextmenu.js
