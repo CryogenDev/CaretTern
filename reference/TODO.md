@@ -1,3 +1,4 @@
+SET USER REFS: /CaretTern/js for require
 
 #Documentation
 1. Commands: https://github.com/thomaswilburn/Caret/wiki/Commands

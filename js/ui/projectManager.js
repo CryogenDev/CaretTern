@@ -46,7 +46,6 @@ define([
           };
           setTimeout(process);
       };
-  
       //FSNodes are used to track filesystem state inside projects
       //We don't use the typical File object, because we're not really reading them
       //Nodes form a tree starting at the root directory

@@ -400,10 +400,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-
+        
+        /*I think this is not used... perhaps replaced by getCompletions
         getHint: function(cm, c) {
             return hint(this, cm, c);
-        },
+        },*/
 
         showType: function(cm, pos, calledFromCursorActivity) {
             showType(this, cm, pos, calledFromCursorActivity);
@@ -474,7 +475,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         restart: function(){
             if(!this.options.useWorker)return;
             this.server.restart(this);
-        }
+        },
+        /**
+         * sends debug message to worker (TEMPORARY) for testing
+         */
+        debug: function(message){
+            if(!this.options.useWorker)return;
+            this.server.sendDebug(message);
+        },
     };
 
     exports.TernServer = TernServer;
@@ -745,7 +753,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     caption: item.name,
                     value: item.name,
                     score: 100,
-                    meta: item.origin ? item.origin : "tern"
+                    /*replace gets file name from path tomake it shorter while showing in popup*/
+                    meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                 };
             });
 
@@ -794,7 +803,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                     }
                 }
-            }
+           }
 
             //now merge other completions with tern (tern has priority)
             //tested on 5,000 line doc with all other completions and takes about ~10ms
@@ -1371,12 +1380,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var doc = findDoc(ts, editor);
             //this calls  function findDef(srv, query, file) {
             ts.server.request(buildRequest(ts, doc, req), function(error, data) {
+                   //DBG(arguments, true);//REMOVE
+                   /**
+                    *  both the data.origin and data.file seem to contain the full path to the location of what we need to jump to
+                    * data contains: context, contextOffset, start (ch,line), end (ch,line), file, origin
+                    */
+                
                 if (error) return showError(ts, editor, error);
                 if (!data.file && data.url) {
                     window.open(data.url);
                     return;
                 }
-                //DBG(arguments, true);//REMOVE
+             
                 if (data.file) {
                     var localDoc = ts.docs[data.file];
                     var found;
@@ -1390,7 +1405,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         // moveTo(ts, doc, localDoc, found.start, found.end);
                         return;
                     }
+                    else{//not local doc- added by morgan... this still needs work as its a hack for the fact that ts.docs does not contain the file we want, instead it only contains a single file at a time. need to fix this (likely needs a big overhaul)
+                    //NOTE: my quick hack is going to make jumpting back to previous file not work. needs to be fixed
+                        moveTo(ts, doc, {name: data.file}, data.start, data.end);
+                        return;
+                    }
                 }
+                
                 showError(ts, editor, "Could not find a definition.");
             });
         }
@@ -1401,6 +1422,32 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         else inner();
     }
 
+     /**
+     * Moves editor to a location (or a location in another document)
+     * @param start - cursor location (can be tern or ace location as it will auto convert)
+     * @param end - cursor location (can be tern or ace location as it will auto convert)
+     */
+    function moveTo(ts, curDoc, doc, start, end) {
+        if (curDoc != doc) {
+            if (ts.options.switchToDoc) {
+                closeArgHints(ts);
+                //5.23.2014- added start  parameter to pass to child
+                ts.options.switchToDoc(doc.name, toAceLoc(start), toAceLoc(end));
+            }
+            else {
+                showError(ts, curDoc.doc, 'Need to add editor.ternServer.options.switchToDoc to jump to another document');
+            }
+            return;
+        }
+        //still going: current doc, so go to
+        curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0); //this will make sure that the line is expanded
+        var sel = curDoc.doc.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
+        sel.setSelectionRange({
+            start: toAceLoc(start),
+            end: toAceLoc(end)
+        });
+    }
+    
     /**
      * Jumps back to previous posistion after using JumpTo
      */
@@ -1411,33 +1458,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
 
-    /**
-     * Moves editor to a location (or a location in another document)
-     * @param start - cursor location (can be tern or ace location as it will auto convert)
-     * @param end - cursor location (can be tern or ace location as it will auto convert)
-     */
-    function moveTo(ts, curDoc, doc, start, end) {
-        curDoc.doc.gotoLine(toAceLoc(start).row, toAceLoc(start).column || 0); //this will make sure that the line is expanded
-        var sel = curDoc.doc.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
-        sel.setSelectionRange({
-            start: toAceLoc(start),
-            end: toAceLoc(end)
-        });
-        //doc.doc.setSelection(end, start);
-
-        if (curDoc != doc) {
-            if (ts.options.switchToDoc) {
-                closeArgHints(ts);
-                //logO(doc, 'moveto.doc');logO(start, 'moveto.start'); logO(end, 'moveto.end');
-                //5.23.2014- added start  parameter to pass to child
-                //console.log(ts.options.switchToDoc, start);
-                ts.options.switchToDoc(doc.name, start);
-            }
-            else {
-                showError(ts, curDoc.doc, 'Need to add editor.ternServer.options.switchToDoc to jump to another document');
-            }
-        }
-    }
+   
 
     /**
      * Dont know what this does yet...
@@ -1708,6 +1729,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var data = e.data;
             if (data.type == "getFile") {
                 getFile(ts, data.name, function(err, text) {
+                   // log('seding file, data=',data, 'text (first 100=',text.substr(0,100));
+                   //sends file back to worker, data contains the name, text contains file string
                     send({
                         type: "getFile",
                         err: String(err),
@@ -1760,6 +1783,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.restart = function(ts){
             startServer(ts);
         };
+        //sends a debug message to worker (TEMPORARY)- worker then gets message and does something with it (have to update worker file with commands)
+        this.sendDebug = function(message){
+            send({
+                type: "debug",
+                body: message
+            });
+        }
     }
     //#endregion
 

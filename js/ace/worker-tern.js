@@ -50,9 +50,8 @@ function onmessage(e) {
             delete pending[data.id];
             return c(data.err, data.text);
         case "setDefs": return setDefs(data.defs);
-        case "setPlugins": //Morgan
-                server.options.plugins = data.body;
-                console.log('tern worker plugins updated: \n\n '+ JSON.stringify(server.options.plugins,null,'\t'));
+        case "debug":
+                debug(data.body);
                 break;
         default: throw new Error("Unknown message type: " + data.type);
     }
@@ -77,6 +76,23 @@ function onmessage(e) {
     //(hack)- gets def from name at the bottom of this file (jquery,ecma5,browser,underscore)
     function getDefFromName(name) {
         return eval('def_' + name);
+    }
+    
+    //(hack)- do something with debug messages
+    function debug(message){
+        var r='';
+        if (message == "files") {
+            for(var i=0; i<server.files.length; i++){
+                if(i>0)r+='\n';
+                r+= server.files[i].name;
+            }
+        }
+        else {
+            console.log("unknown debug message in tern worker:" + message);
+        }
+        if(r){
+            console.log('worker server debug - ' + message +'\n\n'+ r);
+        }
     }
 }
 

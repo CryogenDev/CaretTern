@@ -62,10 +62,20 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                             });
                         };
                         //tell it how to switch to another file
-                        editor.ternServer.options.switchToDoc = function(name, start) {
+                        editor.ternServer.options.switchToDoc = function(name, start, end) {
                             require(["ui/projectManager"], function(projectManager) {
-                                projectManager.openProjectFile(name);
-                                console.log('need to add a way to make this jump to start location after switching file. start='+start);
+                                log('open project file name: ' + name);
+                                projectManager.openFile(name);
+                                //GHETTO: hopefully the file is open by now, so lets jump to the start location (need to update project manager openFile to accept callback when its done to trigger this)
+                                setTimeout(function() {
+                                    editor.gotoLine(start.row, start.column || 0); //this will make sure that the line is expanded
+                                    var sel = editor.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
+                                    sel.setSelectionRange({
+                                        start: start,
+                                        end: end
+                                    });
+                                }, 100);
+                                // console.log('need to add a way to make this jump to start location after switching file. start='+start);
                             });
                         };
                         editor.ternServer.restart();
