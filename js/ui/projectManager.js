@@ -342,11 +342,9 @@ define([
               var self = this;
               var found = false;
               var node = this.pathMap[path];//gets this file from the pathMap
-              log('path',path,'node',node);
               if (!node) return;
               //walk through existing tabs to see if it's already open
               var tabs = sessions.getAllTabs()
-              log('tabs',tabs);
               chrome.fileSystem.getDisplayPath(node.entry, function(path) {
                   //look through the tabs for matching display paths
                   M.map(

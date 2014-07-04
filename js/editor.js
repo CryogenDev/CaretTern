@@ -53,12 +53,19 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 try {
                     if (editor.ternServer) {
                         editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
-                        //temp disabled because it screws up other things...
+                        //tell it how to get files for requirejs
                         editor.ternServer.options.getFile = function(name, callback) {
                             require(["ui/projectManager"], function(projectManager) {
                                 projectManager.readFile(name, function(err,data){
                                     callback(err,data);
                                 });
+                            });
+                        };
+                        //tell it how to switch to another file
+                        editor.ternServer.options.switchToDoc = function(name, start) {
+                            require(["ui/projectManager"], function(projectManager) {
+                                projectManager.openProjectFile(name);
+                                console.log('need to add a way to make this jump to start location after switching file. start='+start);
                             });
                         };
                         editor.ternServer.restart();
