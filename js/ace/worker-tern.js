@@ -42,7 +42,9 @@ function onmessage(e) {
             return startServer(data.defs, data.plugins, data.scripts);
         case "add": return server.addFile(data.name, data.text);
         case "del": return server.delFile(data.name);
-        case "req": return server.request(data.body, function (err, reqData) {
+        case "req":
+            //console.log('request received on server, data=',data.body);
+            return server.request(data.body, function (err, reqData) {
             postMessage({ id: data.id, body: reqData, err: err && String(err) });
         });
         case "getFile":
@@ -6181,6 +6183,7 @@ var console = {
 
     if (!known) {
       known = getModule(name, data);
+      //console.log('addfile, name: ',name);
       data.server.addFile(name, null, data.currentFile);
     }
     return known;

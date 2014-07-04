@@ -1,18 +1,19 @@
 /* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
 
 define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
-
+    
     //#region Default
-    /*
-    Module for loading the editor, adding window resizing and other events. Returns the editor straight from Ace.
-    */
+    
+    //Module for loading the editor, adding window resizing and other events. Returns the editor straight from Ace.
     var userConfig = Settings.get("user");
     var aceConfig = Settings.get("ace");
     var editor = window.editor = ace.edit("editor");
     window.editor = editor; //for debugging
     var themes = document.querySelector(".theme");
+    
     //disable focusing on the editor except by program
     document.find("textarea").setAttribute("tabindex", - 1);
+    
     //one-time startup
     var init = function() {
         aceConfig.themes.forEach(function(theme) {
@@ -25,6 +26,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         //let main.js know this module is ready
         return "editor";
     };
+    
     //reloaded when settings change
     var reset = function() {
         userConfig = Settings.get("user");
@@ -74,7 +76,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                                         start: start,
                                         end: end
                                     });
-                                }, 100);
+                                }, 250);
                                 // console.log('need to add a way to make this jump to start location after switching file. start='+start);
                             });
                         };
@@ -87,6 +89,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
             });
         });
     };
+    
     //#endregion
 
 

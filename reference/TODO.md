@@ -9,6 +9,12 @@ SET USER REFS: /CaretTern/js for require
 - somethign is broken with showing arg hints randomly and it happens in lang tools...
 1. make tern read .ternproj file instead of using preferences
 2. big fix- total change of how things work with local docs (delay til small fixes done)
+3. edit the project manager- make it load all javascript files into tern
+4. edit tern - dont let it add a file 'current'
+5. when tab changes, add the 'hide doc' before the tab change is fired
+6. will likely want to change the switchToDoc and getfile options set for tern in editor.js
+7. will need to make sure that restarting the server re-adds all the files in the project
+8. not sure how to handle files with tern when multiple projects are open...
 
 
 ##Tern Issues

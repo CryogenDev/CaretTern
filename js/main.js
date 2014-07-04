@@ -58,7 +58,7 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
                                 title: "No thanks"
                             }]
                         }, function(id) {
-                            updateID = id
+                            updateID = id;
                         });
                     });
                 });
@@ -128,7 +128,7 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
                 editor.resize();
             }
         });
-    }
+    };
     frame.onFullscreened.addListener(onFullscreen);
     if (frame.isFullscreen()) {
         onFullscreen();

@@ -1,14 +1,9 @@
 define(["sessions/state", "sessions/addRemove", "sessions/switching", "sessions/binding", "editor", "command", "storage/settingsProvider", "util/template!templates/newTabButton.html", "aceBindings"],
-
 function(state, addRemove, switching, bindEvents, editor, command, Settings, inflate) {
-
-    /*
   
-  The sessions module handles tracking tabs, their contents, and their bindings.
-  It shares the sessions:* command namespace with the fileManager module.
+  //The sessions module handles tracking tabs, their contents, and their bindings.
+  //It shares the sessions:* command namespace with the fileManager module.
   
-  */
-
     var syntax = document.find(".syntax");
 
     command.on("session:syntax", function(mode) {

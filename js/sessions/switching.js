@@ -1,9 +1,5 @@
 define(["sessions/state", "editor", "command","storage/settingsProvider"], function(state, editor, command, Settings) {
-
-    /*
-  Various functions for swapping between tags, either from clicks or keyboard.
-  */
-
+  //Various functions for swapping between tabs, either from clicks or keyboard.
     var stackOffset = 0;
 
     //Added by Morgan- needed to get tern

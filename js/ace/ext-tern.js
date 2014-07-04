@@ -305,6 +305,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.jumpStack = [];
     };
 
+     //#region helpers
+    
     /**
      * returns line,ch posistion
      */
@@ -316,7 +318,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     };
     var cls = "Ace-Tern-";
     var bigDoc = 250;
-
     var aceCommands = {
         ternJumpToDef: {
             name: "ternJumpToDef",
@@ -340,6 +341,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             bindKey: "Ctrl-I"
         }
     };
+    
+    //#endregion
 
     TernServer.prototype = {
         bindAceKeys: function(editor) {
@@ -436,7 +439,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos);
-
+            //console.log('request',request);
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -723,7 +726,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
-
+       // console.log('getCompletions entered');
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -736,8 +739,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             guess: true,
             expandWordForward: true
         },
-
         function(error, data) {
+            //DBG(arguments,true);
             if (error) {
                 return showError(ts, editor, error);
             }
