@@ -52,3 +52,12 @@ chrome.contextMenus.onClicked.addListener(onClickHandler);
 
 
 2. will likely want to use custom context menu using //editor.renderer.$cursorLayer.element.on("click"
+
+
+
+#Native Context Menu
+
+-http://www.howtogeek.com/107965/how-to-add-any-application-shortcut-to-windows-explorers-context-menu/
+    -- use regedit
+
+- launch chrome app with file from windows command line: https://developer.chrome.com/apps/first_app#open
