@@ -1430,7 +1430,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function moveTo(ts, curDoc, doc, start, end) {
         if (curDoc != doc) {
             if (ts.options.switchToDoc) {
-                closeArgHints(ts);
+                closeAllTips();
                 //5.23.2014- added start  parameter to pass to child
                 ts.options.switchToDoc(doc.name, toAceLoc(start), toAceLoc(end));
             }

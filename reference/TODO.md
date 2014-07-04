@@ -6,7 +6,9 @@ SET USER REFS: /CaretTern/js for require
 
 
 #LEFT OFF
-1. added methods to restart tern server which can be used after modifying defs or plugins
+- somethign is broken with showing arg hints randomly and it happens in lang tools...
+1. make tern read .ternproj file instead of using preferences
+2. big fix- total change of how things work with local docs (delay til small fixes done)
 
 
 ##Tern Issues
