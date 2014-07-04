@@ -384,12 +384,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             this.server.delFile(name);
         },
         /**
-         * Dont know what this does. There is no documentation on it;
-         * The secndDoc method this calls sends a request of type 'files' that sends a doc to the server;
-         * Perhaps it updates the current document prior to hiding it?
+         * Call this right before changing to a different doc, it will close tooltips and if the document changed, it will send the latest version to the tern sever
          */
         hideDoc: function(name) {
-            closeArgHints(this);
+            closeAllTips();
             var found = this.docs[name];
             if (found && found.changed) sendDoc(this, found);
         },
@@ -1576,6 +1574,22 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     }
 
     //#endregion
+    
+    /**
+     * Called by Hidedoc... Sends document to server
+     */
+    function sendDoc(ts, doc) {
+        ts.server.request({
+            files: [{
+                type: "full",
+                name: doc.name,
+                text: docValue(ts, doc)
+            }]
+        }, function (error) {
+            if (error) console.error(error);
+            else doc.changed = null;
+        });
+    }
 
 
     /**
