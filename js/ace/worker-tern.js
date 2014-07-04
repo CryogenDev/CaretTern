@@ -26,7 +26,6 @@ function postMessage(message) {
     parentSource.postMessage(message, parentOrigin);
 }
 
-
 function onmessage(e) {
     //console.log('onmessage');
     var data = e.data;
@@ -51,8 +50,13 @@ function onmessage(e) {
             delete pending[data.id];
             return c(data.err, data.text);
         case "setDefs": return setDefs(data.defs);
+        case "setPlugins": //Morgan
+                server.options.plugins = data.body;
+                console.log('tern worker plugins updated: \n\n '+ JSON.stringify(server.options.plugins,null,'\t'));
+                break;
         default: throw new Error("Unknown message type: " + data.type);
     }
+    
     //Added for ace- sets defs as setting them on load is not ideal due to structure and the defs are stored in the worker file
     function setDefs(defs) {
         console.log('set defs in worker-tern.js does not work yet... it gets the file but setting the servers defs property is not enough to load the defs- this needs to be updated in tern to allow setting defs after load');
@@ -69,11 +73,12 @@ function onmessage(e) {
             console.log('error setting tern defs (should be passed array) error: ' + ex);
         }
     }
+    
     //(hack)- gets def from name at the bottom of this file (jquery,ecma5,browser,underscore)
     function getDefFromName(name) {
         return eval('def_' + name);
     }
-};
+}
 
 var nextId = 0, pending = {};
 function getFile(file, c) {
@@ -84,7 +89,7 @@ function getFile(file, c) {
 function startServer(defs, plugins, scripts) {
     console.log('startServer');
     if (scripts) importScripts.apply(null, scripts);
-
+    delete server;
     server = new tern.Server({
         getFile: getFile,
         async: true,
@@ -6107,7 +6112,7 @@ var console = {
       return name + (hasExt ? "" : ".js");
 
     var base = opts.baseURL || "";
-    //console.log('base in requirejs.js plugin='+base);
+    console.log('base in requirejs.js plugin='+base);
     if (base && base.charAt(base.length - 1) != "/") base += "/";
     if (opts.paths) {
       var known = opts.paths[name];

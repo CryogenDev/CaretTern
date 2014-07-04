@@ -44,7 +44,7 @@ function DBG(a, logParams, NoTrace) {
                     r += "Called By: Anonymous function, first 200 chars below: \n\n" + a.callee.caller.toString().substr(0, 200) + "\n";
                 }
             }
-            //get param names from function, returns array            
+            //get param names from function, returns array
             var params = getParamNames(a.callee);
             if (params.length > 0) {
                 r += brk;
@@ -104,8 +104,8 @@ function DBG(a, logParams, NoTrace) {
 
 /**
  * Logs a object with description and sets a global variable for testing it
- * @param {obj} object 
- * @param {string} [str_Description] - description for object 
+ * @param {obj} object
+ * @param {string} [str_Description] - description for object
  * @param {bool} [NoTrace=false] - pass true to prevent adding stack trace
  */
 function logO(object, str_Description, NoTrace) {
@@ -157,11 +157,11 @@ function logO(object, str_Description, NoTrace) {
  * @param {bool} [options.time=true] - determines if time logged
  * @param {bool} [options.vars=true] - determines if object should be set to global variable names
  */
-function log() {    
+function log() {
     //check if options passed as first arg
     var options = { 'stack': true, 'time': true, 'vars': true };
     var firstLog = 0;
-    var firstArg = arguments[0];   
+    var firstArg = arguments[0];
     if(arguments.length>1){
         if (firstArg && (firstArg.hasOwnProperty('stack') || firstArg.hasOwnProperty('time') || firstArg.hasOwnProperty('vars'))) {
             try{
@@ -186,7 +186,7 @@ function log() {
         window.logOtempCount = 0;
     }
     //get Stack
-    var stack = '';    
+    var stack = '';
     if (options.stack) {
         try {
             var traces = new Error().stack.replace('Error', '').split('\n');
@@ -216,21 +216,22 @@ function log() {
         var a = arguments[i];
         var type = '';
         try {
-            type = a.constructor.name;
-            /*if (type === 'Object') {//plain object
-                msg += 'Type: PlainObject' + '\n' + 'value: ' + JSON.stringify(a, null, '\t');
-            }*/
-            if (type === 'String' || type === 'Number') {
-                //msg += 'Type: ' + type + '\n' + 'value: ' + a;
-                msg += a ;
+           if (a === undefined) {
+                type = " (undefined) ";
             }
-            else if (type === 'Array' || type === 'Function') {
-                msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
-                logObject = true;
-            }           
-            else {//any other type is a class
-                msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
-                logObject = true;
+            else {
+                type = a.constructor.name;
+                if (type === 'String' || type === 'Number') {
+                    msg += a;
+                }
+                else if (type === 'Array' || type === 'Function') {
+                    msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
+                    logObject = true;
+                }
+                else { //any other type is a class
+                    msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
+                    logObject = true;
+                }
             }
         }
         catch (ex) {//will throw error if undefined or null
@@ -246,13 +247,13 @@ function log() {
                 logObject = true;
                 setTimeout(function () { throw (ex); }, 0);//not sure why this error occurred
             }
-        }       
-        //now do the logging 
-        msg = msg;        
+        }
+        //now do the logging
+        msg = msg;
         var time = (options.time && i === firstLog) ? getTime() + '\n' : '';
         if (logObject) {
             var globalVarName = '';
-            if (options.vars) {             
+            if (options.vars) {
                 logOtempCount++;
                 if (logOtempCount > 99) { logOtempCount = 1; }//max of 99 temp vars
                 globalVarName = 'tmp' + logOtempCount;
@@ -266,7 +267,7 @@ function log() {
                 console.log(msg +globalVarName, a);
             }
         }
-        else {            
+        else {
             if (i === firstLog) {
                 console.log('\n'+time + stack, msg);
             }
@@ -274,7 +275,7 @@ function log() {
                 console.log(msg);
             }
         }
-    }   
+    }
 }
 
 /**

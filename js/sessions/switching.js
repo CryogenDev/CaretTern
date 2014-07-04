@@ -1,4 +1,4 @@
-define(["sessions/state", "editor", "command"], function(state, editor, command) {
+define(["sessions/state", "editor", "command","storage/settingsProvider"], function(state, editor, command, Settings) {
 
     /*
   Various functions for swapping between tags, either from clicks or keyboard.
@@ -6,12 +6,31 @@ define(["sessions/state", "editor", "command"], function(state, editor, command)
 
     var stackOffset = 0;
 
+    //Added by Morgan- needed to get tern
+    var fileChanged= function(){
+         //TODO - terns update arg hints binding gets thrown off when tabs are changed, turning it off and back on again fixes it
+        editor.setOption('enableTern', false);
+        if (Settings.get("user").autocomplete === true) {
+            editor.setOption('enableTern', true);
+        }
+        
+        //tell tern that the document changed
+        if(editor.ternServer){
+            editor.ternServer.docChanged(editor);
+        }
+    };
+    //file changed from API by switching tab or reloading file. Needed to tell tern that a new file is loaded
+    command.on("session:file-changed", fileChanged);
+    
+
+    //Bring the tab at the index specified by the argument to the foreground.
     var raiseTab = function(tab) {
         editor.setSession(tab);
         command.fire("session:syntax");
         command.fire("session:render");
         editor.focus();
         command.fire("session:check-file");
+        command.fire("session:file-changed");//Morgan
     };
 
     var raiseBlurred = function(tab) {
@@ -84,7 +103,8 @@ define(["sessions/state", "editor", "command"], function(state, editor, command)
         raise: raiseTab,
         raiseBlurred: raiseBlurred,
         switchTab: switchTab,
-        switchLinear: switchTabLinear
+        switchLinear: switchTabLinear,
+        fileChanged: fileChanged,
     };
 
 });

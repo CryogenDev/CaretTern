@@ -162,6 +162,29 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
             minHeight: 480
         });
     });
+    
+    //console debugging help
+    try{
+        window.DM="";
+        console.log("To debug commands, use:\n setDebugMode(\"commandName\"); \n (use full name of command to debug, this will log every time the command is fired)");
+        //returns true if global var window.DM equals passed command name
+        window.getDebugMode=function(commandName){
+            try{
+                if(window.DM.toString().toLowerCase().trim() == commandName.toString().toLowerCase().trim()) return true;
+            }
+            catch(ex){
+                
+            }
+        };
+        window.setDebugMode=function(commandName){
+            window.DM=commandName;
+        };
+    }
+    catch(ex){
+        
+    }
+    
+    
     //#endregion
 
 });

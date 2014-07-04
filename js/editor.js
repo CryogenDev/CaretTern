@@ -53,6 +53,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 try {
                     if (editor.ternServer) {
                         editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
+                        editor.ternServer.restart();
                      /* temp disabled because it screws up other things...
                      editor.ternServer.options.getFile = function(name, callback){
                             require(["ui/projectManager"], function(projectManager){
@@ -2036,9 +2037,24 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         var cmd = document.find(".command-line input");
         cmd.style.color = "red"; //note: will be set back to red on next show
         cmd.value = s.toString();
-    }
+    };
     window.command = command; //debugging
-    console.log('global: command (caret command manager)')
+    console.log('global: command (caret command manager); commandList(filter): list all commands with optional filter');
+    //lists commands in console with optional filter
+    window.commandList = function(filter){
+        var arr = [];
+        for (var i = 0; i < command.list.length; i++) {
+            var c = command.list[i];
+            var s = c.command;
+            s += c.argument ? " - " + c.argument : "";
+            if (filter) {
+                if (s.toLowerCase().indexOf(filter.toLowerCase().trim()) === -1) continue;
+            }
+            arr.push(s);
+        }
+        arr.sort();
+        console.log(arr.join("\n"));
+    };
     
     
     

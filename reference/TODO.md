@@ -1,7 +1,19 @@
 
+#Documentation
+1. Commands: https://github.com/thomaswilburn/Caret/wiki/Commands
+2. session:file-changed - added to switching.js, this command is fired when tab changes or when tab is reloaded because file changed externally. tells tern to update file
+
+
 #LEFT OFF
 
 -- tern. added public method docChanged... find the binding i already put in place to reset tern whe tab changes and add this... then add the auto get VS refs
+
+##Tern Issues
+1. There are no methods to push settings to the worker, what ever settings are there when the thing is initalized is how it remains
+2. Need to fix this so defs, plugs, etc.. can be changed as needed (by reading files in the project that direct tern on what to do)
+3. NOTE: this is ghetto by design as Marijnh made the worker server super fast as an option for code mirror!
+
+
 
 #TODO list
 
@@ -14,10 +26,15 @@
 -  for auto show type, make it not do it unless its a funcion call (check for paren ater), will have to do something slightly complex like the function that finds out if its in a call
 - tooltip stays open if currently open and tab switched... figure out a good generic way to handle this
 
+
+
 ##Things to Remember
 
 1. editor.ternServer.options.plugins.requirejs ={"baseURL": "./", "paths": {}}
 2./* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
+
+
+
 
 
 

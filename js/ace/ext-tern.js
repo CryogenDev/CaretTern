@@ -377,6 +377,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * @param {string} name = name of file
          */
         delDoc: function(name) {
+            var found = this.docs[name];
+            if (!found) return;
             found.doc.off("change", this.trackChange);
             delete this.docs[name];
             this.server.delFile(name);
@@ -464,6 +466,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
             //add current doc
             this.addDoc("current", editor);
+        },
+        /**
+         * (ghetto) (for web worker only) needed to update plugins and options- tells web worker to kill current tern server and start over as options and plugins can only be set during initialization
+         * Need to call this after changing any plugins
+         */
+        restart: function(){
+            if(!this.options.useWorker)return;
+            this.server.restart(this);
         }
     };
 
@@ -480,6 +490,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function getFile(ts, name, cb) {
         //DBG(arguments,true); - example : util/dom2.js
         console.log('getFile - name:', name);
+        //GHETTO: the tern options dont appear to be getting pushed to the worker
+        
+        
         var buf = ts.docs[name];
         if (buf) cb(docValue(ts, buf));
         else if (ts.options.getFile) ts.options.getFile(name, cb);
@@ -1669,12 +1682,21 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //var worker = new Worker(ts.options.workerScript);
         var worker = new fakeWorker();
-        worker.postMessage({
-            type: "init",
-            defs: ts.options.defs,
-            plugins: ts.options.plugins,
-            scripts: ts.options.workerDeps
-        });
+        
+        /**
+         * Starts worker server (or can be used to restart with new plugins/options)
+         */
+        var startServer = function(ts){
+            worker.postMessage({
+                type: "init",
+                defs: ts.options.defs,
+                plugins: ts.options.plugins,
+                scripts: ts.options.workerDeps
+            });
+        };
+        
+        startServer(ts);//start
+        
         var msgId = 0,
             pending = {};
 
@@ -1736,7 +1758,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 type: "setDefs",
                 defs: arr_defs
             });
-        }
+        };
+        //restarts worker's tern instance with updated options/plugins
+        this.restart = function(ts){
+            startServer(ts);
+        };
     }
     //#endregion
 

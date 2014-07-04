@@ -31,6 +31,18 @@ define(["util/text!config/commands.json", "util/dom2"], function(list) {
         if (typeof argument == "function") {
             callback = argument;
         }
+        
+        //debugging - Morgan
+        try{
+            if(window.getDebugMode(command)){
+                log('fireCommand:',command,'argument:',argument,'callback:',callback);
+            }
+        }
+        catch(ex){
+            
+        }
+        
+        
         var registry = commands[command].slice();
         registry.forEach(function(entry) {
             var result = entry.callback.apply(null, args);
@@ -43,6 +55,8 @@ define(["util/text!config/commands.json", "util/dom2"], function(list) {
     };
 
     var register = function(command, listener, sync) {
+        //log('register command:',command,'listener',listener,'sync',sync);//uncomment to trace all commands getting registered
+        
         if (!commands[command]) {
             commands[command] = [];
         }

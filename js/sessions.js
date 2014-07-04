@@ -13,12 +13,7 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
 
     command.on("session:syntax", function(mode) {
         var session = editor.getSession();
-
-        //TODO - terns update arg hints binding gets thrown off when tabs are changed, turning it off and back on again fixes it
-        editor.setOption('enableTern', false);
-        if (Settings.get("user").autocomplete === true) {
-            editor.setOption('enableTern', true);
-        }
+       
         if (mode) {
             session.setMode("ace/mode/" + mode);
             session.syntaxMode = mode;

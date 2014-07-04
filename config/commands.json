@@ -13,6 +13,7 @@
   { "command": "editor:print", "label": "Print File" },
   { "command": "session:close-to-right", "label": "Close Tabs to the Right" },
   { "command": "session:insert-from-file", "label": "Insert from File" },
+  { "command": "session:file-changed", "label": "Active File Changed by API (not user)" },
   
   { "label": "Undo", "command": "ace:command", "argument": "undo" },
   { "label": "Redo", "command": "ace:command", "argument": "redo" },
