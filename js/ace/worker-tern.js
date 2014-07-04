@@ -89,7 +89,9 @@ function getFile(file, c) {
 function startServer(defs, plugins, scripts) {
     console.log('startServer');
     if (scripts) importScripts.apply(null, scripts);
-    delete server;
+    if(server){//Morgan- because server can be restarted
+      delete server;
+    }
     server = new tern.Server({
         getFile: getFile,
         async: true,
@@ -6112,7 +6114,7 @@ var console = {
       return name + (hasExt ? "" : ".js");
 
     var base = opts.baseURL || "";
-    console.log('base in requirejs.js plugin='+base);
+    //console.log('base in requirejs.js plugin='+base);
     if (base && base.charAt(base.length - 1) != "/") base += "/";
     if (opts.paths) {
       var known = opts.paths[name];

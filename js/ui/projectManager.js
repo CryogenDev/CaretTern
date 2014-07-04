@@ -10,7 +10,6 @@ define([
     "util/template!templates/projectDir.html,templates/projectFile.html",
     "util/dom2"
   ], function(Settings, command, sessions, File, M, dialog, context, editor, inflate) {
-  
       /*
     It's tempting to store projects in local storage, similar to the way that we
     retain files for tabs, but this would be a mistake. Reading from storage is a
@@ -121,6 +120,7 @@ define([
   
       var ProjectManager = function(element) {
           this.directories = [];
+          //contains all mapped files/folders in the files tree
           this.pathMap = {};
           this.expanded = {};
           this.project = null;
@@ -334,13 +334,19 @@ define([
               });
           },
   
+          /**
+           * Opens a file (in a tab or switches to tab) that is already loaded in the project tree
+           * @param {string} path - file path, example: /CaretTern/js/aceBindings.js
+           */
           openFile: function(path) {
               var self = this;
               var found = false;
-              var node = this.pathMap[path];
+              var node = this.pathMap[path];//gets this file from the pathMap
+              log('path',path,'node',node);
               if (!node) return;
               //walk through existing tabs to see if it's already open
               var tabs = sessions.getAllTabs()
+              log('tabs',tabs);
               chrome.fileSystem.getDisplayPath(node.entry, function(path) {
                   //look through the tabs for matching display paths
                   M.map(
@@ -371,7 +377,7 @@ define([
           },
   
           /**
-           * reads file by path and returns the file data (used for tern to read files for require.js). this is a quick ghetto hack. needs improvment, including updating tern when the reference fiels change
+           * (Morgan)reads file by path and returns the file data (used for tern to read files for require.js). this is a quick ghetto hack. needs improvment, including updating tern when the reference fiels change
            * @param {fn} callback that accepts (err,data {file data as string}, file {filesystem})
            */
           readFile: function(path, callback) {
@@ -385,8 +391,7 @@ define([
                   file.read(function(err, data) {
                       //console.log('data', data);
                       //console.log('file', file);
-                      //sessions.addFile(data, file);
-                      callback(err,data,file);
+                      callback(err,data);
                   });
               });
           },

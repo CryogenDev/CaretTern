@@ -36,6 +36,9 @@ define(["util/manos"], function(M) {
             });
         },
 
+        /**
+         * Reads file and sends text to callback
+         */
         read: function(c) {
             var self = this;
 

@@ -489,10 +489,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function getFile(ts, name, cb) {
         //DBG(arguments,true); - example : util/dom2.js
-        console.log('getFile - name:', name);
-        //GHETTO: the tern options dont appear to be getting pushed to the worker
-        
-        
+        //console.log('getFile - name:', name);
         var buf = ts.docs[name];
         if (buf) cb(docValue(ts, buf));
         else if (ts.options.getFile) ts.options.getFile(name, cb);

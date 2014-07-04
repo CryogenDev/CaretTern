@@ -216,8 +216,11 @@ function log() {
         var a = arguments[i];
         var type = '';
         try {
-           if (a === undefined) {
+            if (a === undefined) {
                 type = " (undefined) ";
+            }
+            else if (a === null) {
+                type = " (null) ";
             }
             else {
                 type = a.constructor.name;

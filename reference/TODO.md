@@ -5,8 +5,8 @@
 
 
 #LEFT OFF
+1. added methods to restart tern server which can be used after modifying defs or plugins
 
--- tern. added public method docChanged... find the binding i already put in place to reset tern whe tab changes and add this... then add the auto get VS refs
 
 ##Tern Issues
 1. There are no methods to push settings to the worker, what ever settings are there when the thing is initalized is how it remains
@@ -17,6 +17,7 @@
 
 #TODO list
 
+- clean up worker-tern- no need for the setting of defs after server starts, instead just restart server after changing defs
 - Add context menus for ace, contextmenu.js
 - Add option and binding (with debounce) for showing type on cursor activity (make sure not in call before sending request to tern)
 - find a way to update jshint options for entire project, the state.maxerrors default is 100, and its way too low
