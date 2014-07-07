@@ -55,6 +55,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 try {
                     if (editor.ternServer) {
                         editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
+                        editor.ternServer.options.plugins.angular = true;
                         //tell it how to get files for requirejs
                         editor.ternServer.options.getFile = function(name, callback) {
                             require(["ui/projectManager"], function(projectManager) {
