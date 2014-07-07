@@ -1417,10 +1417,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             });
         }
 
+        /* TODO: need to convert this part or see if its even needed
         if (!atInterestingExpression(editor)) dialog(editor, "Jump to variable", function(name) {
             if (name) inner(name);
         });
-        else inner();
+        else inner();*/
+        inner();
     }
 
      /**
