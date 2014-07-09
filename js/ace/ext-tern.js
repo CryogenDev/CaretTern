@@ -1,4 +1,4 @@
-/*jshint maxerr: 10000 */
+/*jshint maxerr:10000 */
 
 /**
  * Ace Tern server configuration (uses worker in separate file)
