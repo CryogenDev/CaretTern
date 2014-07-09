@@ -51,7 +51,7 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
             self.path = path;
             command.fire("session:render");
         });
-    }
+    };
 
     Tab.prototype.save = function(as) {
 
@@ -148,6 +148,9 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
             }
             else if (this.file.entry) {
                 var extension = this.file.entry.name.split(".").pop();
+                if(extension == 'aspx'){
+                    extension='html';//MORGAN- override for aspx
+                }
                 //this won't ever change, safe to get each time
                 var aceConfig = Settings.get("ace");
                 for (var i = 0; i < aceConfig.modes.length; i++) {

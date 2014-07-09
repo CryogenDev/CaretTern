@@ -1,3 +1,6 @@
+/// <reference path="../helpers.js" />
+/// <reference path="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore.js" />
+
 /*jshint maxerr:10000 */
 
 /**
@@ -83,7 +86,7 @@ function(require, exports, module) {
         });
     };
     //#endregion
-    
+
 
     //#region AutoComplete
 
@@ -135,10 +138,10 @@ function(require, exports, module) {
         defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
             doc_comment: true,
-            requirejs: {
+            /*requirejs: {
                 "baseURL": "./",
                 "paths": {}
-            },
+            },*/
         },
         workerScript: ace.config.moduleUrl('worker/tern'),
         useWorker: true,
@@ -305,8 +308,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.jumpStack = [];
     };
 
-     //#region helpers
-    
+    //#region helpers
+
     /**
      * returns line,ch posistion
      */
@@ -341,7 +344,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             bindKey: "Ctrl-I"
         }
     };
-    
+
     //#endregion
 
     TernServer.prototype = {
@@ -382,7 +385,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         delDoc: function(name) {
             var found = this.docs[name];
             if (!found) return;
-            found.doc.off("change", this.trackChange);
+            try{//stop tracking changes
+                found.doc.off("change", this.trackChange);
+            }
+            catch(ex){}
             delete this.docs[name];
             this.server.delFile(name);
         },
@@ -401,7 +407,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-        
+
         /*I think this is not used... perhaps replaced by getCompletions
         getHint: function(cm, c) {
             return hint(this, cm, c);
@@ -461,27 +467,29 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         /**
          * (ghetto and temporary). Call this when current doc changes, it will delete all docs on the server then add current doc
          */
-        docChanged: function(editor){
+        docChanged: function(editor) {
             //delete all docs
-            for(var p in this.docs){
+            for (var p in this.docs) {
                 this.delDoc(p);
             }
             //add current doc
             this.addDoc("current", editor);
+            console.log('checking for VS refs because Doc changed... DISABLE when done with adding correct editorSession interface');
+            loadTernRefs(this, editor);
         },
         /**
          * (ghetto) (for web worker only) needed to update plugins and options- tells web worker to kill current tern server and start over as options and plugins can only be set during initialization
          * Need to call this after changing any plugins
          */
-        restart: function(){
-            if(!this.options.useWorker)return;
+        restart: function() {
+            if (!this.options.useWorker) return;
             this.server.restart(this);
         },
         /**
          * sends debug message to worker (TEMPORARY) for testing
          */
-        debug: function(message){
-            if(!this.options.useWorker)return;
+        debug: function(message) {
+            if (!this.options.useWorker) return;
             this.server.sendDebug(message);
         },
     };
@@ -726,7 +734,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
-       // console.log('getCompletions entered');
+        // console.log('getCompletions entered');
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -739,6 +747,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             guess: true,
             expandWordForward: true
         },
+
         function(error, data) {
             //DBG(arguments,true);
             if (error) {
@@ -804,7 +813,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                     }
                 }
-           }
+            }
 
             //now merge other completions with tern (tern has priority)
             //tested on 5,000 line doc with all other completions and takes about ~10ms
@@ -1381,18 +1390,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var doc = findDoc(ts, editor);
             //this calls  function findDef(srv, query, file) {
             ts.server.request(buildRequest(ts, doc, req), function(error, data) {
-                   //DBG(arguments, true);//REMOVE
-                   /**
-                    *  both the data.origin and data.file seem to contain the full path to the location of what we need to jump to
-                    * data contains: context, contextOffset, start (ch,line), end (ch,line), file, origin
-                    */
-                
+                //DBG(arguments, true);//REMOVE
+                /**
+                 *  both the data.origin and data.file seem to contain the full path to the location of what we need to jump to
+                 * data contains: context, contextOffset, start (ch,line), end (ch,line), file, origin
+                 */
+
                 if (error) return showError(ts, editor, error);
                 if (!data.file && data.url) {
                     window.open(data.url);
                     return;
                 }
-             
+
                 if (data.file) {
                     var localDoc = ts.docs[data.file];
                     var found;
@@ -1406,13 +1415,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         // moveTo(ts, doc, localDoc, found.start, found.end);
                         return;
                     }
-                    else{//not local doc- added by morgan... this still needs work as its a hack for the fact that ts.docs does not contain the file we want, instead it only contains a single file at a time. need to fix this (likely needs a big overhaul)
-                    //NOTE: my quick hack is going to make jumpting back to previous file not work. needs to be fixed
-                        moveTo(ts, doc, {name: data.file}, data.start, data.end);
+                    else { //not local doc- added by morgan... this still needs work as its a hack for the fact that ts.docs does not contain the file we want, instead it only contains a single file at a time. need to fix this (likely needs a big overhaul)
+                        //NOTE: my quick hack is going to make jumpting back to previous file not work. needs to be fixed
+                        moveTo(ts, doc, {
+                            name: data.file
+                        }, data.start, data.end);
                         return;
                     }
                 }
-                
+
                 showError(ts, editor, "Could not find a definition.");
             });
         }
@@ -1425,7 +1436,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         inner();
     }
 
-     /**
+    /**
      * Moves editor to a location (or a location in another document)
      * @param start - cursor location (can be tern or ace location as it will auto convert)
      * @param end - cursor location (can be tern or ace location as it will auto convert)
@@ -1450,7 +1461,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: toAceLoc(end)
         });
     }
-    
+
     /**
      * Jumps back to previous posistion after using JumpTo
      */
@@ -1461,7 +1472,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
 
-   
 
     /**
      * Dont know what this does yet...
@@ -1579,7 +1589,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     }
 
     //#endregion
-    
+
     /**
      * Called by Hidedoc... Sends document to server
      */
@@ -1590,7 +1600,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 name: doc.name,
                 text: docValue(ts, doc)
             }]
-        }, function (error) {
+        }, function(error) {
             if (error) console.error(error);
             else doc.changed = null;
         });
@@ -1719,11 +1729,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         //var worker = new Worker(ts.options.workerScript);
         var worker = new fakeWorker();
-        
+
         /**
          * Starts worker server (or can be used to restart with new plugins/options)
          */
-        var startServer = function(ts){
+        var startServer = function(ts) {
             worker.postMessage({
                 type: "init",
                 defs: ts.options.defs,
@@ -1731,9 +1741,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 scripts: ts.options.workerDeps
             });
         };
-        
-        startServer(ts);//start
-        
+
+        startServer(ts); //start
+
         var msgId = 0,
             pending = {};
 
@@ -1748,8 +1758,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var data = e.data;
             if (data.type == "getFile") {
                 getFile(ts, data.name, function(err, text) {
-                   // log('seding file, data=',data, 'text (first 100=',text.substr(0,100));
-                   //sends file back to worker, data contains the name, text contains file string
+                    // log('seding file, data=',data, 'text (first 100=',text.substr(0,100));
+                    //sends file back to worker, data contains the name, text contains file string
                     send({
                         type: "getFile",
                         err: String(err),
@@ -1799,11 +1809,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             });
         };
         //restarts worker's tern instance with updated options/plugins
-        this.restart = function(ts){
+        this.restart = function(ts) {
             startServer(ts);
         };
         //sends a debug message to worker (TEMPORARY)- worker then gets message and does something with it (have to update worker file with commands)
-        this.sendDebug = function(message){
+        this.sendDebug = function(message) {
             send({
                 type: "debug",
                 body: message
@@ -1827,120 +1837,132 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     //#region GetVisualStudioRefs
 
     //this is total ghetto and temporary, and not meant to part of the tern extension
-    function loadTernRefs() {
-        if (editor.ternServer && editor.ternServer.enabledAtCurrentLocation(editor)) {
-            var StringtoCheck = "";
-            for (var i = 0; i < editor.session.getLength(); i++) {
-                var thisLine = editor.session.getLine(i);
-                if (thisLine.substr(0, 3) === "///") {
-                    StringtoCheck += "\n" + thisLine;
-                }
-                else {
-                    break; //only top lines may be references
+    function loadTernRefs(ts, editor) {
+        if (!editor.ternServer || !editor.ternServer.enabledAtCurrentLocation(editor)) {
+            console.log('tern not enabled at current location, not adding vs refs');
+            return;
+        }
+        var StringtoCheck = "";
+        for (var i = 0; i < editor.session.getLength(); i++) {
+            var thisLine = editor.session.getLine(i);
+            if (thisLine.substr(0, 3) === "///") {
+                StringtoCheck += "\n" + thisLine;
+            }
+            else {
+                break; //only top lines may be references
+            }
+        }
+        if (StringtoCheck === '') {
+            //console.log('no refs found for file, exiting');
+            return;
+        }
+        //console.log('refs string=' + StringtoCheck);
+
+        var re = /(?!\/\/\/\s*?<reference path=")[^"]*/g;
+        var m;
+        var refs = [];
+        while ((m = re.exec(StringtoCheck)) != null) {
+            if (m.index === re.lastIndex) {
+                re.lastIndex++;
+            }
+            var r = m[0].replace('"', '');
+            if (r.toLowerCase().indexOf('reference path') === -1 && r.trim() !== '' && r.toLowerCase().indexOf('/>') === -1) {
+                if (r.toLowerCase().indexOf('vsdoc') === -1) { //dont load vs doc files as they are visual studio xml junk
+                    refs.push(r);
                 }
             }
-            if (StringtoCheck !== '') {
-                var re = /(?!\/\/\/\s*?<reference path=")[^"]*/g;
-                var m;
-                var refs = [];
-                while ((m = re.exec(StringtoCheck)) != null) {
-                    if (m.index === re.lastIndex) {
-                        re.lastIndex++;
+        }
+
+        //resolves path if needed (if relative)
+        //NOTE: chromes filesystem wants to open files with forward slashes and they must start with the name of the opened project folder
+        var ResolvePath = function(path, currentPath, projectDirectories) {
+            try {
+                //console.log('path=',path,'currentPath=',currentPath);
+                var pathPart1 = currentPath;
+                if (path.toLowerCase().indexOf("http") !== -1) {
+                    return path;
+                }
+                path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
+                while (path.substr(0, 3) === '..\\') {
+                    var t1 = pathPart1.substr(0, pathPart1.lastIndexOf("\\"));
+                    var t2 = t1.substr(0, t1.lastIndexOf("\\"));
+                    pathPart1 = t2;
+                    path = path.substring(3);
+                }
+                var final = pathPart1 + "\\" + path;
+                final = final.replace(/\\/g, '/'); //back to forward slashes (ghetto)
+               // console.log('final:', final);
+
+                //check project directoires to get relative path to project directory
+                for (var i = 0; i < projectDirectories.length; i++) {
+                    var dir = projectDirectories[i].path;
+                    if (final.indexOf(dir) !== -1) {
+                        //console.log('found in dir=' + dir);
+                        final = final.substr(final.indexOf(dir));
+                        break;
                     }
-                    var r = m[0].replace('"', '');
-                    if (r.toLowerCase().indexOf('reference path') === -1 && r.trim() !== '' && r.toLowerCase().indexOf('/>') === -1) {
-                        if (r.toLowerCase().indexOf('vsdoc') === -1) { //dont load vs doc files as they are visual studio xml junk
-                            refs.push(r);
+                    else {
+                        //console.log('NOT in dir=' + dir);
+                    }
+                }
+               // console.log('final relative to project:', final);
+                return final;
+            }
+            catch (ex) {
+                log('ERROR', ex);
+            }
+            return "";
+        };
+
+        //reads file and adds to tern
+        var ReadFile_AddToTern = function(path) {
+            try {
+                //console.log('add ref. name=' + name + '; path=' + path);
+                if (path.toLowerCase().indexOf("http") !== -1) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("get", path, true);
+                    xhr.send();
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState == 4) {
+                            console.log('adding web reference: ' + path);
+                           // alert('adding web reference: ' + path);
+                            editor.ternServer.addDoc(path.replace(/^.*[\\\/]/, ''), xhr.responseText);
                         }
-                    }
+                    };
                 }
-                //get current path from loaded file
-                var currentPath = '';
-                try {
-                    currentPath = window.loadedFile.substring(0, window.loadedFile.lastIndexOf("\\") + 1);
-                }
-                catch (ex) {
-                    log('failed to get current file path from: ' + window.loadedFile, ex);
-                }
-                log('refs', refs, 'currentPath', currentPath, 'window.loadedFile', window.loadedFile);
-
-                //resolves path if needed (if relative)
-                var ResolvePath =function (path) {
-                    var pathPart1 = currentPath;
-                    if (path.toLowerCase().indexOf("http") !== -1) {
-                        return path;
-                    }
-                    path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
-                    while (path.substr(0, 3) === '..\\') {
-                        var t1 = pathPart1.substr(0, pathPart1.lastIndexOf("\\"));
-                        var t2 = t1.substr(0, t1.lastIndexOf("\\"));
-                        pathPart1 = t2;
-                        path = path.substring(3);
-                    }
-                    return pathPart1 + "\\" + path;
-                };
-                //reads file and adds to tern
-                 var ReadFile_AddToTern= function(name, path) {
-                    if (path.toLowerCase().indexOf("http") !== -1) {
-                        var http = require('http');
-                        //downloads file and fires callback whend one
-                        var downloadFile= function(url, dest, cb) {
-                            var file = fs.createWriteStream(dest);
-                            var request = http.get(url, function(response) {
-                                response.pipe(file);
-                                file.on('finish', function() {
-                                    file.close(cb);
-                                });
-                            });
-                        };
-                        //generate temp file name
-                        var tempFileName = "TEMP_" + Math.random().toString(36).slice(2) + ".js";
-
-                        //download file to temp directory
-                        downloadFile(path, tempFileName, function() {
-                            //download file complete, now read it and add to tern
-                            fs.readFile(tempFileName, function(err, data) {
-                                if (err) {
-                                    log('error getting file: ' + path, err);
-                                }
-                                else {
-                                    log({
-                                        stack: false,
-                                        time: false
-                                    }, 'adding ' + name + ' to tern (' + path + ')');
-                                    editor.ternServer.addDoc(name, data.toString());
-                                }
-                                //now delete the temp file
-                                fs.unlink(tempFileName);
-                            });
-                        });
-                    }
-                    else { //local
-                        fs.readFile(thisPath, function(err, data) {
-                            if (err) {
-                                log('error getting file: ' + path, err);
-                            }
-                            else {
-                                log({
-                                    stack: false,
-                                    time: false
-                                }, 'adding ' + name + ' to tern (' + path + ')');
-                                editor.ternServer.addDoc(name, data.toString());
-                            }
-                        });
-                    }
-                };
-                //load each file
-                for (var i = 0; i < refs.length; i++) {
-                    var thisPath = ResolvePath(refs[i]);
-                    var name = thisPath.replace(/^.*[\\\/]/, '');
-                    ReadFile_AddToTern(name, thisPath);
+                else { //local
+                    getFile(ts, path, function(err, data) {
+                        if (err) {
+                            log('error getting file: ' + path, err);
+                        }
+                        else {
+                            //log('get file data', data);
+                            editor.ternServer.addDoc(path, data.toString());
+                            //alert('adding reference: '+ path);
+                            console.log('adding reference: '+ path);
+                        }
+                    });
                 }
             }
-        }
-        else {
-            log('tern not enabled at current location');
-        }
+            catch (ex) {
+                log('add to tern error', ex);
+            }
+        };
+        //get open project directories, needed to build the correct relative path (has to guess which directory to use by using string contains... could possibly break)
+
+
+        editor.session.file.getPath(function(err, p) {
+            var currentPath = p;
+            //log('refs', refs);
+            //var currentPath=editor.session.file.entry.fullPath; //this returns /CaretTern/js/ace/ext-tern.js , but doesn't work on first load if retained file...
+            ////note: current path is path of currently opened file, example: ~\Desktop\localGit\CaretTern\js\ace\ext-tern.js
+            for (var i = 0; i < refs.length; i++) {
+                var thisPath = refs[i];
+                thisPath = ResolvePath(thisPath, currentPath, pm.project.folders);
+                //console.log('resolved path: ' + thisPath +'\n original: '+ refs[i]+'\t\t current: '+currentPath);
+                ReadFile_AddToTern(thisPath);
+            }
+        });
     }
     //#endregion
 });

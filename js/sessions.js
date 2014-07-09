@@ -16,7 +16,6 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
         else {
             mode = session.syntaxMode;
         }
-
         syntax.value = mode;
     });
 

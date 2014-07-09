@@ -1,4 +1,6 @@
 SET USER REFS: /CaretTern/js for require
+IMPORTAN: --- the doc changed is firing when the thing is looking for a changed version of the file.. which is scrolling the junk back to the top of the page, need to fix this ASAP as its super annoying.
+
 
 #Documentation
 1. Commands: https://github.com/thomaswilburn/Caret/wiki/Commands
@@ -25,6 +27,12 @@ SET USER REFS: /CaretTern/js for require
 
 
 #TODO list
+
+- edit session.js
+    command.on("session:syntax", function(mode) {
+    OR tab.js :  Tab.prototype.detectSyntax = function(userConfig) {
+    -- add override to set .aspx to html
+
 
 - clean up worker-tern- no need for the setting of defs after server starts, instead just restart server after changing defs
 - Add context menus for ace, contextmenu.js

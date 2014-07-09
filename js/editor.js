@@ -52,10 +52,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                     enableBasicAutocompletion: userConfig.autocomplete
                 });
                 //TODO- make tern read this from a config file per project
+                console.log('requirejs  and angular temporaily disabled');
+                //console.log('editor.ternServer.debug("files") \t\t (use to test files when using require)');
                 try {
                     if (editor.ternServer) {
-                        editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
-                        editor.ternServer.options.plugins.angular = true;
+                        //editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
+                        //editor.ternServer.options.plugins.angular = true;
                         //tell it how to get files for requirejs
                         editor.ternServer.options.getFile = function(name, callback) {
                             require(["ui/projectManager"], function(projectManager) {

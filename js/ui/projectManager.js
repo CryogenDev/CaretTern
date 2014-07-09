@@ -529,7 +529,7 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
     command.on("init:restart", setAutoHide);
 
     window.pm = pm;
-    console.log('window.pm - ProjectManager');
+    console.log('window.pm - ProjectManager (WARNING, this global is used by ext-tern.js for quick vs ref hack');
     return pm;
 
 });

@@ -12,7 +12,9 @@ define(["sessions/state", "editor", "command","storage/settingsProvider"], funct
         
         //tell tern that the document changed
         if(editor.ternServer){
-            editor.ternServer.docChanged(editor);
+            setTimeout(function() {
+                editor.ternServer.docChanged(editor);
+            }, 500);
         }
     };
     //file changed from API by switching tab or reloading file. Needed to tell tern that a new file is loaded
