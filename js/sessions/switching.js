@@ -1,7 +1,7 @@
 define(["sessions/state", "editor", "command","storage/settingsProvider"], function(state, editor, command, Settings) {
   //Various functions for swapping between tabs, either from clicks or keyboard.
     var stackOffset = 0;
-
+    
     //Added by Morgan- needed to get tern
     var fileChanged= function(){
          //TODO - terns update arg hints binding gets thrown off when tabs are changed, turning it off and back on again fixes it

@@ -7,6 +7,7 @@ define(["sessions", "editor", "storage/file", "ui/dialog", "command", "storage/s
   Now that session.js is refactored, this could probably move into a submodule,
   except that it gets loaded explicitly on startup.
   */
+  
 
     command.on("session:open-dragdrop", function(items) {
         [].forEach.call(items, function(entry) {
@@ -81,16 +82,43 @@ define(["sessions", "editor", "storage/file", "ui/dialog", "command", "storage/s
         });
     });
 
-    command.on("session:revert-file", function(c) {
+    /**
+     * reverts file IF NEEDED (first checks that files data has actually be modified)
+     * regardless of need to revert file, will always update the local modified date with that of the file system
+     * @param {bool} [showDialog=false] - pass true to show dialog IF the file is reverted
+     *
+     */
+    command.on("session:revert-file", function(showDialog,c) {
         var tab = sessions.getCurrent();
         if (!tab.file) return;
         tab.file.read(function(err, data) {
-            tab.setValue(data);
-            tab.modified = false;
-            tab.modifiedAt = new Date();
-            command.fire("session:file-changed");//Morgan
-            sessions.renderTabs();
+            //Modified by morgan
+            //caused issues with reverting repeatidly due to files being on mapped network drives showing different lastModifiedDate than the one set here because of the delay between saving the file and the acutal save being completed
+            
+            tab.modified=false;
+            //set tabs modified at to that of the file entry, not now
+            if (tab.file && !tab.file.virtual) {
+                 tab.file.entry.file(function(entry) {
+                    tab.modifiedAt = entry.lastModifiedDate;
+                 });
+            }
+            //only set tabs value if it doesnt match
+            if (tab.getValue() != data) {
+                 tab.setValue(data);
+                 sessions.renderTabs();
+                 command.fire("session:file-changed"); //Morgan
+                 if(showDialog){
+                     dialog("File reloaded from file system due to external modifications");
+                 }
+            }
             if (c) c();
+        
+            // Original code here:
+            // tab.setValue(data);
+            // tab.modified = false;
+            // tab.modifiedAt = new Date();
+            // sessions.renderTabs();
+            // if (c) c();
         });
     });
 
@@ -102,7 +130,7 @@ define(["sessions", "editor", "storage/file", "ui/dialog", "command", "storage/s
             keep[i] = tab.file.retain();
         });
         keep = keep.filter(function(m) {
-            return m
+            return m;
         });
         if (keep.length) {
             chrome.storage.local.set({
@@ -116,29 +144,38 @@ define(["sessions", "editor", "storage/file", "ui/dialog", "command", "storage/s
         var tab = sessions.getCurrent();
         if (!tab.file || tab.file.virtual) return;
         tab.file.entry.file(function(entry) {
+            //if the tab was modified outside of caret
             if (tab.modifiedAt && entry.lastModifiedDate > tab.modifiedAt) {
-                if (tab.modified) {
-                    dialog("This file has been modified since the last time it was saved. Would you like to reload?", [{
-                        label: "Reload",
-                        value: true
-                    }, {
-                        label: "Cancel",
-                        value: false,
-                        focus: true
-                    }],
-
-                    function(confirmed) {
-                        if (confirmed) {
-                            command.fire("session:revert-file");
-                        }
-                        else {
-                            tab.modifiedAt = new Date();
-                        }
-                    });
-                }
-                else {
-                    command.fire("session:revert-file");
-                }
+                //modified by morgan - read the file and make sure it actually changed
+                tab.file.read(function(err, data) {
+                    if(tab.getValue() == data){//file in caret matches that in the file system
+                        command.fire("session:revert-file");//update the last modified date locally to that of the file
+                        return;
+                    }
+                    //still going: the file was actually changed externally
+                    if (tab.modified) { //tab was also modified inside caret and has not been saved yet
+                        dialog("This file has been modified since the last time it was saved. Would you like to reload?", [{
+                            label: "Reload",
+                            value: true
+                        }, {
+                            label: "Cancel",
+                            value: false,
+                            focus: true
+                        }],
+            
+                        function(confirmed) {
+                            if (confirmed) {
+                                command.fire("session:revert-file");
+                            }
+                            else {
+                                tab.modifiedAt = new Date();
+                            }
+                        });
+                    }
+                    else { //tab not modified inside of caret
+                        command.fire("session:revert-file", true);
+                    }
+                });
             }
         });
     });

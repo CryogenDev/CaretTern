@@ -1,12 +1,8 @@
 define(["command", "storage/file", "util/manos", "settings!ace,user", "util/template!templates/tab.html"], function(command, File, M, Settings, inflate) {
 
-    /*
-  
-  Tabs are just augmented versions of regular Ace sessions. We add properties
-  to track the attached file, detect syntax, render the tab UI, and fire events
-  when the tab is removed.
-  
-  */
+//   Tabs are just augmented versions of regular Ace sessions. We add properties
+//   to track the attached file, detect syntax, render the tab UI, and fire events
+//   when the tab is removed.
 
     var EditSession = ace.require("ace/edit_session").EditSession;
 
@@ -69,6 +65,17 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
                 if (err) {
                     return deferred.fail(err);
                 }
+                /* Needs more testing... might do the trick but not sure.. right now its implemented in the file manager revert file
+                //Morgan - read modified date form file as it can have a delay in saving, espescially if on mapped drive, which caused the modified date set here to differ from that on the file, so every time the tab is changed to, it reloads the file erroneously
+                if(self.file && !self.file.virtual){
+                    self.file.entry.file(function(entry) {
+                        self.modifiedAt = entry.lastModifiedDate;
+                        self.modified = false;
+                        command.fire("session:render");
+                        deferred.done();
+                    });
+                }*/
+                
                 self.modifiedAt = new Date();
                 self.modified = false;
                 command.fire("session:render");
@@ -148,8 +155,8 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
             }
             else if (this.file.entry) {
                 var extension = this.file.entry.name.split(".").pop();
-                if(extension == 'aspx'){
-                    extension='html';//MORGAN- override for aspx
+                if (extension == 'aspx') {
+                    extension = 'html'; //MORGAN- override for aspx
                 }
                 //this won't ever change, safe to get each time
                 var aceConfig = Settings.get("ace");
