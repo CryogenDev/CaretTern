@@ -349,6 +349,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.ternServer.findRefs(editor);
             },
             bindKey: "Ctrl-E"
+        },
+        ternRename: {
+            name: "ternRename",
+            exec: function(editor) {
+                editor.ternServer.rename(editor);
+            },
+            bindKey: "Ctrl-Shift-E"
         }
     };
 
@@ -427,18 +434,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             updateArgHints(this, editor);
         },
 
-        jumpToDef: function(cm) {
-            jumpToDef(this, cm);
+        jumpToDef: function(editor) {
+            jumpToDef(this, editor);
         },
 
         jumpBack: function(cm) {
             jumpBack(this, cm);
         },
-
-        rename: function(cm) {
-            rename(this, cm);
+        /**
+         * Opens prompt to rename current variable and update references
+         */
+        rename: function(editor) {
+            rename(this, editor);
         },
-        
         /**
          * Finds references to variable at current cursor location and shows tooltip
          */
@@ -959,8 +967,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     
    /**
     * Finds all references to the current token
+    * @param {function} [cb] - pass a callback to return find refs data result instead of showing tooltip, used internally by rename
     */
-    function findRefs(ts, editor) {
+    function findRefs(ts, editor, cb) {
         if(!inJavascriptMode(editor)){
             return;
         }
@@ -969,6 +978,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             fullDocs: true
         }, function (error, data) {
             if (error) return showError(ts, editor, error);
+            
+            //if callback, then send data and quit here
+            if(typeof cb === "function"){
+                cb(data);
+                return;
+            }
+            
             //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
             var r = data.name + '(' + data.type + ') References \n-----------------------------------------';
             if (!data.refs || data.refs.length === 0) {
@@ -988,20 +1004,105 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         });
     }
     
-    // Variable renaming NOT CONVERTED
-    function rename(ts, cm) {
-        var token = cm.getTokenAt(cm.getCursor());
-        if (!/\w/.test(token.string)) showError(ts, cm, "Not at a variable");
-        dialog(cm, "New name for " + token.string, function(newName) {
-            ts.request(cm, {
-                type: "rename",
-                newName: newName,
-                fullDocs: true
-            }, function(error, data) {
-                if (error) return showError(ts, cm, error);
-                applyChanges(ts, data.changes);
+    /**
+     * Renames variable at current location
+     *
+     */
+    function rename(ts, editor) {
+        /*var token = editor.getTokenAt(editor.getCursor());
+            if (!/\w/.test(token.string)) showError(ts, editor, "Not at a variable");*/
+    
+        findRefs(ts, editor, function(r) {
+            if (!r || r.refs.length === 0) {
+                showError(ts, editor, "Cannot rename as no references were found for this variable");
+                return;
+            }
+            /*if(r.type =="global"){
+                showError(ts, editor, "Cannot rename global variable yet (variables in different source files cannot be renamed YET, its on TODO list");
+                return;
+            }*/
+            
+            //execute rename
+            var executeRename = function(newName){
+              ts.request(editor, {
+                    type: "rename",
+                    newName: newName,
+                    fullDocs: true
+                }, function(error, data) {
+                    if (error) return showError(ts, editor, error);
+                    applyChanges(ts, data.changes,function(){
+                        tip.appendChild(elt("div","","\n replace complete!"));
+                    });
+                });
+            };
+            
+            //create tooltip to get new name from user
+            var tip = makeTooltip(null, null, elt("div", "", r.name +": " + r.refs.length + " references found \n (WARNING: this wont work for refs in another file!) \n\n Enter new name:\n"), editor, true);
+            var newNameInput = elt('input');
+            tip.appendChild(newNameInput);
+            try{
+                setTimeout(function() {
+                    newNameInput.focus();
+                }, 100);
+            }
+            catch(ex){}
+    
+            var goBtn = elt('button', '');
+            goBtn.textContent = "Rename";
+            goBtn.setAttribute("type", "button");
+            goBtn.addEventListener('click', function() {
+                var newName = newNameInput.value;
+                //TODO: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
+                if(!newName || newName.trim().length ===0){
+                    remove(tip);
+                    showError(ts,editor,"new name cannot be empty");
+                    return;
+                }
+                executeRename(newName);
             });
+            tip.appendChild(goBtn);
         });
+    }
+    
+    var nextChangeOrig = 0;
+    /**
+     * Applys changes for a variable rename.
+     * From CodeMirror, not sure exactly how logic works
+     * TODO: this only works for current file at the moment!
+     */
+    function applyChanges(ts, changes, cb) {
+        log('changes',changes);
+        var Range = ace.require("ace/range").Range;//for ace
+        var perFile = Object.create(null);
+        for (var i = 0; i < changes.length; ++i) {
+            var ch = changes[i];
+            (perFile[ch.file] || (perFile[ch.file] = [])).push(ch);
+        }
+        for (var file in perFile) {
+            var known = ts.docs[file],
+                chs = perFile[file];;
+            if (!known) continue;
+            chs.sort(function(a, b) {
+                return cmpPos(b.start, a.start);
+            });
+            var origin = "*rename" + (++nextChangeOrig);
+            for (var i = 0; i < chs.length; ++i) {
+                var ch = chs[i];
+                //known.doc.replaceRange(ch.text, ch.start, ch.end, origin);
+                //console.log('ch.text: ' , ch.text , ' ;ch.start: ' , ch.start,' ;ch.end: ' , ch.end ,' ;origin: ' , origin );
+                //NOTE: the origin is used for CodeMirror: When origin is given, it will be passed on to "change" events, and its first letter will be used to determine whether this change can be merged with previous history events, in the way described for selection origins. -- example of origin: *rename1  (TODO: see if ace has some change origin for better history undo)
+                
+                //ch.start and ch.end are {line,ch}
+                ch.start = toAceLoc(ch.start);
+                ch.end = toAceLoc(ch.end);
+                //ace range: function (startRow, startColumn, endRow, endColumn) {
+                known.doc.replace(new Range(ch.start.row, ch.start.column, ch.end.row, ch.end.column), ch.text);
+       
+            }
+        }
+        if(typeof cb ==="function"){
+            cb();
+        }
     }
 
     /**
@@ -1266,6 +1367,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     //#region tooltips
+    
 
     /**
      * returns the difference of posistion a - posistion b (returns difference in line if any, then difference in ch if any)
@@ -1320,18 +1422,23 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             int_timeout = 3000;
         }
         var location = getCusorPosForTooltip(editor);
-        makeTooltip(location.left, location.top, content, editor, true, int_timeout);
+        return makeTooltip(location.left, location.top, content, editor, true, int_timeout);
     }
     /**
      * Makes a tooltip to show extra info in the editor
-     * @param {number} x - x coordinate (relative to document)
-     * @param {number} y - y coordinate (relative to document)
+     * @param {number} x - x coordinate (relative to document) (pass null to use current location)
+     * @param {number} y - y coordinate (relative to document) (pass null to use current location)
      * @param {element} content
      * @param {ace.editor} [editor] - must pass editor if closeOnCusorActivity=true to bind event
      * @param {bool} [closeOnCusorActivity=false] - pass true to bind next cursor activty to destroy this tooltip, this will also bind closing on editor scroll
      * @param {int} [faceOutDuration] - pass a number to make the tooltip fade out (make it temporary)
      */
     function makeTooltip(x, y, content, editor, closeOnCusorActivity, fadeOutDuration) {
+        if(x===null || y===null){
+            var location = getCusorPosForTooltip(editor);
+            x = location.left;
+            y = location.top;
+        }
         var node = elt("div", cls + "tooltip", content);
         node.style.left = x + "px";
         node.style.top = y + "px";

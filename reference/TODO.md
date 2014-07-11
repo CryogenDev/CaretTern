@@ -17,7 +17,10 @@ IMPORTAN: --- the doc changed is firing when the thing is looking for a changed 
 6. will likely want to change the switchToDoc and getfile options set for tern in editor.js
 7. will need to make sure that restarting the server re-adds all the files in the project
 8. not sure how to handle files with tern when multiple projects are open...
-
+9. Tracking of changes seems to have issues which is why sometimes we get 'file does not contain line x...'
+10. find refs: make the tooltip not auto close, but include a close button, and make clicking on ref jump to definition!
+11. rename: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
+12. rename: only works for current file right now... need to fix 
 
 ##Tern Issues
 1. There are no methods to push settings to the worker, what ever settings are there when the thing is initalized is how it remains

@@ -132,6 +132,9 @@
     "Ctrl-E": {
         "ace": "ternFindRefs"
     },
+    "Ctrl-Shift-E": {
+        "ace": "ternRename"
+    },
     "f1": {
         "ace": "foldOther"
     },
