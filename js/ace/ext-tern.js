@@ -342,6 +342,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.ternServer.showType(editor);
             },
             bindKey: "Ctrl-I"
+        },
+        ternFindRefs: {
+            name: "ternFindRefs",
+            exec: function(editor) {
+                editor.ternServer.findRefs(editor);
+            },
+            bindKey: "Ctrl-E"
         }
     };
 
@@ -407,19 +414,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         getCompletions: function(editor, session, pos, prefix, callback) {
             getCompletions(this, editor, session, pos, prefix, callback);
         },
-
-        /*I think this is not used... perhaps replaced by getCompletions
-        getHint: function(cm, c) {
-            return hint(this, cm, c);
-        },*/
-
-        showType: function(cm, pos, calledFromCursorActivity) {
-            showType(this, cm, pos, calledFromCursorActivity);
+        /**
+         * Shows javascript type (example: function, string, custom object, etc..) at current cursor location
+         */
+        showType: function(editor, pos, calledFromCursorActivity) {
+            showType(this, editor, pos, calledFromCursorActivity);
         },
-
-        updateArgHints: function(cm) {
-            // console.log('update arg hints',cm);
-            updateArgHints(this, cm);
+        /**
+         * Shows arugments hints as tooltip at current cursor location if inside of function call
+         */
+        updateArgHints: function(editor) {
+            updateArgHints(this, editor);
         },
 
         jumpToDef: function(cm) {
@@ -432,6 +437,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         rename: function(cm) {
             rename(this, cm);
+        },
+        
+        /**
+         * Finds references to variable at current cursor location and shows tooltip
+         */
+        findRefs: function (editor) {
+            findRefs(this, editor);
         },
 
         selectName: function(cm) {
@@ -882,37 +894,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-
-    /**
-     * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
-     * @returns bool
-     */
-    function isOnFunctionCall(editor) {
-        if (!inJavascriptMode(editor)) return false;
-        if (somethingIsSelected(editor)) return false;
-        if (isInCall(editor)) return false;
-
-        var tok = getCurrentToken(editor);
-        if (!tok) return; //No token at current location
-        if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
-        if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
-        if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
-
-        //check if next token after this one is open parenthesis
-        var nextTok = editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
-        if (!nextTok || nextTok.value !== "(") return false;
-
-        return true;
-    }
-
-    /**
-     * Returns true if something is selected in the editor (meaning more than 1 character)
-     */
-    function somethingIsSelected(editor) {
-        return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
-    }
-
-    /**
+    
+     /**
      * shows type info
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
      */
@@ -972,6 +955,82 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
         }, pos);
+    }
+    
+   /**
+    * Finds all references to the current token
+    */
+    function findRefs(ts, editor) {
+        if(!inJavascriptMode(editor)){
+            return;
+        }
+        ts.request(editor, {
+            type: "refs",
+            fullDocs: true
+        }, function (error, data) {
+            if (error) return showError(ts, editor, error);
+            //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
+            var r = data.name + '(' + data.type + ') References \n-----------------------------------------';
+            if (!data.refs || data.refs.length === 0) {
+                r += '<br/>' + 'No references found';
+            }
+            for (var i = 0; i < data.refs.length; i++) {
+                var tmp = data.refs[i];
+                try {
+                    r += '\n' + tmp.file + ' - line: ' + tmp.start.line + ' ch: ' + tmp.start.ch;
+                }
+                catch (ex) {
+                    log('findRefs inner loop error (should not happen)', ex);
+                }
+            }
+            closeAllTips();
+            tempTooltip(editor, r, -1);
+        });
+    }
+    
+    // Variable renaming NOT CONVERTED
+    function rename(ts, cm) {
+        var token = cm.getTokenAt(cm.getCursor());
+        if (!/\w/.test(token.string)) showError(ts, cm, "Not at a variable");
+        dialog(cm, "New name for " + token.string, function(newName) {
+            ts.request(cm, {
+                type: "rename",
+                newName: newName,
+                fullDocs: true
+            }, function(error, data) {
+                if (error) return showError(ts, cm, error);
+                applyChanges(ts, data.changes);
+            });
+        });
+    }
+
+    /**
+     * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
+     * @returns bool
+     */
+    function isOnFunctionCall(editor) {
+        if (!inJavascriptMode(editor)) return false;
+        if (somethingIsSelected(editor)) return false;
+        if (isInCall(editor)) return false;
+
+        var tok = getCurrentToken(editor);
+        if (!tok) return; //No token at current location
+        if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
+        if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
+        if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
+
+        //check if next token after this one is open parenthesis
+        var nextTok = editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
+        if (!nextTok || nextTok.value !== "(") return false;
+
+        return true;
+    }
+
+    /**
+     * Returns true if something is selected in the editor (meaning more than 1 character)
+     */
+    function somethingIsSelected(editor) {
+        return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
     }
 
     /**
@@ -1251,7 +1310,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
     }
 
-    //TODO- not converted yet!
+    /**
+     * Creates tooltip at current cusor location;
+     * tooltip will auto close on cursor activity;
+     * @param {int} [int_timeout=3000] - pass fadeout time, or -1 to not fade out
+     */
     function tempTooltip(editor, content, int_timeout) {
         if (!int_timeout) {
             int_timeout = 3000;
@@ -1354,6 +1417,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         catch (ex) {
             setTimeout(function() {
+                if(typeof msg === undefined){
+                    msg =" (no error passed)";
+                }
                 throw new Error('tern show error failed.' + msg + '\n\n fail error:' + ex);
             }, 0);
         }
@@ -1472,7 +1538,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
 
-
     /**
      * Dont know what this does yet...
      * Marijnh's comment: The {line,ch} representation of positions makes this rather awkward.
@@ -1540,54 +1605,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return /\w/.test(editor.session.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
         //return /\w/.test(editor.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
     }
-
-    // Variable renaming NOT CONVERTED
-    function rename(ts, cm) {
-        var token = cm.getTokenAt(cm.getCursor());
-        if (!/\w/.test(token.string)) showError(ts, cm, "Not at a variable");
-        dialog(cm, "New name for " + token.string, function(newName) {
-            ts.request(cm, {
-                type: "rename",
-                newName: newName,
-                fullDocs: true
-            }, function(error, data) {
-                if (error) return showError(ts, cm, error);
-                applyChanges(ts, data.changes);
-            });
-        });
-    }
-
-    //Find references ADDED BY MORGAN- NOT CONVERTED
-    function findRefs(ts, cm) {
-        var token = cm.getTokenAt(cm.getCursor());
-        if (!/\w/.test(token.string)) showError(ts, cm, "Not at a variable");
-        ts.request(cm, {
-            type: "refs",
-            fullDocs: true
-        }, function(error, data) {
-            if (error) return showError(ts, cm, error);
-            //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
-            var r = data.name + '(' + data.type + ') References \n-----------------------------------------';
-            if (!data.refs || data.refs.length === 0) {
-                r += '<br/>' + 'No references found';
-            }
-            for (var i = 0; i < data.refs.length; i++) {
-                var tmp = data.refs[i];
-                try {
-                    r += '\n' + tmp.file + ' - line: ' + tmp.start.line + ' ch: ' + tmp.start.ch;
-                }
-                catch (ex) {
-                    setTimeout(function() {
-                        throw ex;
-                    }, 0);
-                }
-            }
-            //log(r);
-            closeAllTips();
-            tempTooltip(cm, r, - 1);
-        });
-    }
-
+    
     //#endregion
 
     /**
@@ -1605,7 +1623,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             else doc.changed = null;
         });
     }
-
 
     /**
      * returns true if current mode is javascript;
@@ -1826,7 +1843,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     //#region CSS
     var dom = require("ace/lib/dom");
 
-    dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; }  .Ace-Tern-completion:before { position: absolute; left: 0px; bottom: 0px;  border-radius: 50%; font-size: 12px; font-weight: bold; height: 13px; width: 13px; font-size:11px;  /*BYM*/  line-height: 14px;  text-align: center; color: white; -moz-box-sizing: border-box; box-sizing: border-box; }  .Ace-Tern-completion-unknown:before { content: \"?\"; background: #4bb; }  .Ace-Tern-completion-object:before { content: \"O\"; background: #77c; }  .Ace-Tern-completion-fn:before { content: \"F\"; background: #7c7; }  .Ace-Tern-completion-array:before { content: \"A\"; background: #c66; }  .Ace-Tern-completion-number:before { content: \"1\"; background: #999; }  .Ace-Tern-completion-string:before { content: \"S\"; background: #999; }  .Ace-Tern-completion-bool:before { content: \"B\"; background: #999; }  .Ace-Tern-completion-guess { color: #999; }  .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 110%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0,0,0,.2); -moz-box-shadow: 2px 3px 5px rgba(0,0,0,.2); box-shadow: 2px 3px 5px rgba(0,0,0,.2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; }  .Ace-Tern-hint-doc { max-width: 25em; }  .Ace-Tern-fname { color: black; }  .Ace-Tern-farg { color: #70a; }  .Ace-Tern-farg-current {font-weight:bold; color:magenta; }  .Ace-Tern-type { color: #07c; }  .Ace-Tern-fhint-guess { opacity: .7; }");
+    dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; }  .Ace-Tern-completion:before { position: absolute; left: 0px; bottom: 0px;  border-radius: 50%; font-size: 12px; font-weight: bold; height: 13px; width: 13px; font-size:11px;  /*BYM*/  line-height: 14px;  text-align: center; color: white; -moz-box-sizing: border-box; box-sizing: border-box; }  .Ace-Tern-completion-unknown:before { content: \"?\"; background: #4bb; }  .Ace-Tern-completion-object:before { content: \"O\"; background: #77c; }  .Ace-Tern-completion-fn:before { content: \"F\"; background: #7c7; }  .Ace-Tern-completion-array:before { content: \"A\"; background: #c66; }  .Ace-Tern-completion-number:before { content: \"1\"; background: #999; }  .Ace-Tern-completion-string:before { content: \"S\"; background: #999; }  .Ace-Tern-completion-bool:before { content: \"B\"; background: #999; }  .Ace-Tern-completion-guess { color: #999; }  .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 110%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0,0,0,.2); -moz-box-shadow: 2px 3px 5px rgba(0,0,0,.2); box-shadow: 2px 3px 5px rgba(0,0,0,.2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; }  .Ace-Tern-hint-doc { max-width: 25em; }  .Ace-Tern-fname { color: black; }  .Ace-Tern-farg { color: #70a; }  .Ace-Tern-farg-current {font-weight:bold; color:magenta; }  .Ace-Tern-type { color: #07c; }  .Ace-Tern-fhint-guess { opacity: .7; }");
 
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
