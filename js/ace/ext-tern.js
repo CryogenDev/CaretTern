@@ -1024,14 +1024,26 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             
             //execute rename
             var executeRename = function(newName){
-              ts.request(editor, {
+                ts.request(editor, {
                     type: "rename",
                     newName: newName,
                     fullDocs: true
                 }, function(error, data) {
                     if (error) return showError(ts, editor, error);
-                    applyChanges(ts, data.changes,function(){
-                        tip.appendChild(elt("div","","\n replace complete!"));
+                    applyChanges(ts, data.changes, function(result) {
+                        //show result tip
+                        var resultTip = makeTooltip(null, null, elt("div", "", "Replaced " + result.replaced + " references sucessfully"), editor, true);
+                        var errors = elt("div", "");
+                        errors.setAttribute("style", "color:red");
+                        if (result.replaced != r.refs.length) {
+                            errors.textContent = " WARNING! original refs: " + r.refs.length + ", replaced refs: " + result.replaced;
+                        }
+                        if (result.errors !== "") {
+                            errors.textContent += " \n Errors encountered:" + result.errors;
+                        }
+                        if (errors.textContent !== "") {
+                            resultTip.appendChild(errors);
+                        }
                     });
                 });
             };
@@ -1051,13 +1063,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             goBtn.textContent = "Rename";
             goBtn.setAttribute("type", "button");
             goBtn.addEventListener('click', function() {
+                remove(tip);
                 var newName = newNameInput.value;
                 //TODO: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
                 if(!newName || newName.trim().length ===0){
-                    remove(tip);
                     showError(ts,editor,"new name cannot be empty");
                     return;
                 }
+                
                 executeRename(newName);
             });
             tip.appendChild(goBtn);
@@ -1078,6 +1091,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var ch = changes[i];
             (perFile[ch.file] || (perFile[ch.file] = [])).push(ch);
         }
+        
+        //result for callback
+        var result={
+            replaced: 0,
+            status: "",
+            errors:""
+        };
+        
         for (var file in perFile) {
             var known = ts.docs[file],
                 chs = perFile[file];;
@@ -1087,21 +1108,27 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             });
             var origin = "*rename" + (++nextChangeOrig);
             for (var i = 0; i < chs.length; ++i) {
-                var ch = chs[i];
-                //known.doc.replaceRange(ch.text, ch.start, ch.end, origin);
-                //console.log('ch.text: ' , ch.text , ' ;ch.start: ' , ch.start,' ;ch.end: ' , ch.end ,' ;origin: ' , origin );
-                //NOTE: the origin is used for CodeMirror: When origin is given, it will be passed on to "change" events, and its first letter will be used to determine whether this change can be merged with previous history events, in the way described for selection origins. -- example of origin: *rename1  (TODO: see if ace has some change origin for better history undo)
+                try{
+                    var ch = chs[i];
+                    //known.doc.replaceRange(ch.text, ch.start, ch.end, origin);
+                    //console.log('ch.text: ' , ch.text , ' ;ch.start: ' , ch.start,' ;ch.end: ' , ch.end ,' ;origin: ' , origin );
+                    //NOTE: the origin is used for CodeMirror: When origin is given, it will be passed on to "change" events, and its first letter will be used to determine whether this change can be merged with previous history events, in the way described for selection origins. -- example of origin: *rename1  (TODO: see if ace has some change origin for better history undo)
                 
-                //ch.start and ch.end are {line,ch}
-                ch.start = toAceLoc(ch.start);
-                ch.end = toAceLoc(ch.end);
-                //ace range: function (startRow, startColumn, endRow, endColumn) {
-                known.doc.replace(new Range(ch.start.row, ch.start.column, ch.end.row, ch.end.column), ch.text);
-       
+                    //ch.start and ch.end are {line,ch}
+                    ch.start = toAceLoc(ch.start);
+                    ch.end = toAceLoc(ch.end);
+                    //ace range: function (startRow, startColumn, endRow, endColumn) {
+                    known.doc.session.replace(new Range(ch.start.row, ch.start.column, ch.end.row, ch.end.column), ch.text);
+                    result.replaced++;
+                }
+                catch(ex){
+                       result.errors+= '\n ' + file+ ' - ' + ex.toString();
+                       log('error applying rename changes', ex);
+                }
             }
         }
         if(typeof cb ==="function"){
-            cb();
+            cb(result);
         }
     }
 
