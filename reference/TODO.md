@@ -2,13 +2,16 @@ SET USER REFS: /CaretTern/js for require
 IMPORTAN: --- the doc changed is firing when the thing is looking for a changed version of the file.. which is scrolling the junk back to the top of the page, need to fix this ASAP as its super annoying.
 
 
+
+palette.js //find text in open tab(s) -- make search all js files.. still not done
+
 #Documentation
 1. Commands: https://github.com/thomaswilburn/Caret/wiki/Commands
 2. session:file-changed - added to switching.js, this command is fired when tab changes or when tab is reloaded because file changed externally. tells tern to update file
 
 
 #LEFT OFF
-- somethign is broken with showing arg hints randomly and it happens in lang tools...
+- somethign is broken with showing arg hints randomly and it happens in lang tools...- CAUSED BY REQUIREJS
 1. make tern read .ternproj file instead of using preferences
 2. big fix- total change of how things work with local docs (delay til small fixes done)
 3. edit the project manager- make it load all javascript files into tern
@@ -21,6 +24,8 @@ IMPORTAN: --- the doc changed is firing when the thing is looking for a changed 
 10. find refs: make the tooltip not auto close, but include a close button, and make clicking on ref jump to definition!
 11. rename: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
 12. rename: only works for current file right now... need to fix
+13. 
+
 
 ##Tern Issues
 1. There are no methods to push settings to the worker, what ever settings are there when the thing is initalized is how it remains
@@ -42,12 +47,13 @@ IMPORTAN: --- the doc changed is firing when the thing is looking for a changed 
 - Add context menus for ace, contextmenu.js
 - Add option and binding (with debounce) for showing type on cursor activity (make sure not in call before sending request to tern)
 - find a way to update jshint options for entire project, the state.maxerrors default is 100, and its way too low
-- Add find refs
 - add caching of auto show type so it doesnt have to keep calling tern for type info (just like arg hints)
 -   PROBLEM: requirejs plugin not working because im setting the requirejs options in the editor.js after tern is initialized, and it appaers that the settings are not being pushed to the worker. ALSO: commented out setting the get file option in editor.js as it breaks auto complete because the current file doesnt seem to get added... needs lots of work
--  for auto show type, make it not do it unless its a funcion call (check for paren ater), will have to do something slightly complex like the function that finds out if its in a call
+
 - tooltip stays open if currently open and tab switched... figure out a good generic way to handle this
 
+- Add built in web server (distant future) using nodejs in chrome: http://blog.iceddev.com/2012-11-05-node-js-in-chrome.html
+- 
 
 
 ##Things to Remember

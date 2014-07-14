@@ -326,21 +326,22 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
         },
 
         /**
-         * Opens a file (in a tab or switches to tab) that is already loaded in the project tree
+         * Opens a file (in a tab or switches to tab) that is already loaded in the project tree         * 
          * @param {string} path - file path, example: /CaretTern/js/aceBindings.js
+         * @param {function} [callback] - callback to call with tab as parameter
          */
-        openFile: function(path) {
+        openFile: function(path, callback) {
             var self = this;
             var found = false;
             var node = this.pathMap[path]; //gets this file from the pathMap
             if (!node) return;
             //walk through existing tabs to see if it's already open
-            var tabs = sessions.getAllTabs()
+            var tabs = sessions.getAllTabs();
             chrome.fileSystem.getDisplayPath(node.entry, function(path) {
                 //look through the tabs for matching display paths
                 M.map(
                 tabs,
-
+            
                 function(tab, i, c) {
                     if (!tab.file || tab.file.virtual) {
                         return c(false);
@@ -350,8 +351,9 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
                             sessions.setCurrent(tab);
                             found = true;
                         }
-                        //we don't actually use the result
-                        c();
+                        //log('c=',c);
+                        c(); //we don't actually use the result (not sure what this does)
+                        if (callback) callback(tab); //MORGAN- use callback
                     });
                 },
                 //if no match found, create a tab
@@ -359,7 +361,9 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
                     if (found) return;
                     var file = new File(node.entry);
                     file.read(function(err, data) {
-                        sessions.addFile(data, file);
+                        tab = sessions.addFile(data, file);
+                        //log('callback',callback,'tab',tab);
+                        if (callback) callback(tab); //MORGAN - made return 
                     });
                 });
             });

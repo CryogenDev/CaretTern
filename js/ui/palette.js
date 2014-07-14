@@ -1,3 +1,4 @@
+/*jshint maxerr:10000 */
 define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", "ui/projectManager", "util/template!templates/paletteItem.html", "util/dom2"], function(sessions, command, editor, Settings, status, project, inflate) {
 
     var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
@@ -50,8 +51,58 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
         this.searchAll = false;
         this.needParseScheduled = false;
         this.bindInput();
+        this.toggleSearchAll(false);
+        this.bindSearchAll();
+        this.searchAllStatus = document.find(".searchAllStatus");
+        //added to keep the thing open on extra click
+        this.DoNotBlur = false;
     };
     Palette.prototype = {
+
+        //set search all status. @status= html string, pass blank to clear and hide status
+        setSearchAllStatus: function(status) {
+            if (!status) {
+                this.searchAllStatus.style.display = "none";
+                return;
+            }
+            this.searchAllStatus.style.display = "block";
+            this.searchAllStatus.innerHTML = status;
+        },
+
+        /**
+         * quick hack to search all files with .js extension
+         * TODO: add user input for filter like notepad++
+         */
+        toggleSearchAll: function(show) {
+            var el = document.find(".searchAll");
+            if (show === true) {
+                el.style.display = "block";
+            }
+            else {
+                el.style.display = "none";
+            }
+        },
+
+        //binds link to search all
+        bindSearchAll: function() {
+            var input = this.input;
+            var self = this;
+            el = document.find(".searchAll");
+            el.on('click', function() {
+                self.preventHideOnBlur();
+                self.findLocations(input.value, true);
+            });
+        },
+
+        //call to  prevent hiding on blur for 400ms- useful to allow click elsewhere without blur
+        preventHideOnBlur: function() {
+            var self = this;
+            self.DoNotBlur = true;
+            setTimeout(function() {
+                self.DoNotBlur = false;
+            }, 400);
+        },
+
         bindInput: function() {
             var input = this.input;
             var self = this;
@@ -219,8 +270,141 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
             return entry;
         },
 
-        //note: this function is WAY TOO LONG
-        findLocations: function(query) {
+        //search all files that are js
+        searchAllFiles: function(crawl) {
+            var self = this;
+            self.element.focus();//refocus on input text after user click on link
+            var searchFiles = project.getPaths();
+            var totalSearchFiles = 0;
+            var readSearchFiles = 0;
+            var filteredSearchFiles = [];
+            var loopDone = false;
+            var results =[];
+
+            //called after all search complete to show results
+            //WARNING! this is copied code from the main findLocations function, this is super ghetto and messy
+            var showSearchResult = function(results) {
+                log('results', results);
+                tabs = results;
+                if (self.results.length) {
+                    var current = self.results[self.selected];
+                    if (!current.tab) return;
+                    sessions.raiseBlurred(current.tab);
+                    if (current.line) {
+                        editor.clearSelection();
+                        editor.gotoLine(current.line + 1, current.column || 0);
+                        //editor.moveCursorTo(current.line, current.column || 0);
+                        if (current.column) {
+                            editor.execCommand("selectwordright");
+                        }
+                    }
+                }
+            };
+
+            //search single tab
+            var searchTab = function(tab, found, allFilesSearched, lines) {
+                if(allFilesSearched)console.log('all files searched - 3');
+                var position = tab.doc.indexToPosition(found.index);
+                if (lines.indexOf(position.row) > -1) {
+
+                }
+                else {
+                    lines.push(position.row);
+                    var result = {
+                        tab: tab
+                    };
+                    result.label = result.tab.fileName;
+                    result.sublabel = sanitize(result.tab.getLine(position.row));
+                    result.line = position.row;
+                    results.push(result);
+                    //if (results.length >= findResultsLimit) return;
+                }
+                if (allFilesSearched) {
+                    showSearchResult(results);
+                }
+            };
+
+            //search single path
+            var searchPath = function(path, found, allFilesSearched, lines) {
+               if(allFilesSearched) console.log('all files searched - 2');
+                var tab = sessions.getTabByPath(path);
+                if (tab !== null) {
+                    searchTab(tab, found, allFilesSearched, lines);
+                }
+                else {
+                    //get tab from project manager (will open new tab or find existing)
+                    project.openFile(path, function(tab) {
+                        searchTab(tab, found, allFilesSearched, lines);
+                    });
+                }
+            };
+
+            //after files are read, execute search
+            var performSearchOnReadFiles = function() {
+                var allFilesSearched = false;
+                for (var i = 0; i < filteredSearchFiles.length; i++) {
+                    if ((i + 1) === totalSearchFiles) {
+                        allFilesSearched = true;
+                        console.log('all files searched -1');
+                    }
+                    self.setSearchAllStatus('searching file ' + (i + 1) + ' out of ' + totalSearchFiles);
+                    var f = filteredSearchFiles[i];
+
+                    //if (results.length >= findResultsLimit) return;
+                    var found;
+                    var lines = [];
+                    var text = f.fileText;
+                    while (found = crawl.exec(text)) {
+                        searchPath(f.path, found, allFilesSearched, lines);
+                    }
+                }
+            };
+
+            //adds file to array to search 
+            var addFiltereredSearchFile = function(path, fileText) {
+                readSearchFiles++;
+                self.setSearchAllStatus('reading file ' + readSearchFiles + ' out of ' + totalSearchFiles);
+                filteredSearchFiles.push({
+                    path: path,
+                    fileText: fileText
+                });
+                if (loopDone && readSearchFiles == totalSearchFiles) {
+                    //log('loopDone. results=', filteredSearchFiles);
+                    performSearchOnReadFiles();
+                }
+            };
+
+            searchFiles.forEach(function(element, index, array) {
+                if (index === array.length - 1) {
+                    loopDone = true;
+                }
+                //console.log("a[" + index + "] = " + element);
+                var ext = '';
+                try {
+                    ext = element.split('.').pop().toLowerCase();
+                }
+                catch (ex) {}
+                if (ext !== 'js') {
+                    return;
+                }
+
+                totalSearchFiles++;
+                project.readFile(element, function(err, data) {
+                    if (err) {
+                        readSearchFiles--;
+                        log('ERROR reading file, this will break everything');
+                        return;
+                    }
+                    addFiltereredSearchFile(element, data);
+                });
+            });
+
+        },
+
+        //note: this function is WAY TOO LONG.
+        // @param {bool} useSearchAll - pass true when button clicked that fires search all
+        findLocations: function(query, useSearchAll) {
+            this.toggleSearchAll(false); //morgan
             var file = re.file.test(query) && re.file.exec(query)[1];
             var line = re.line.test(query) && Number(re.line.exec(query)[1]) - 1;
             var search = re.search.test(query) && re.search.exec(query)[1];
@@ -233,7 +417,7 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
             if (file) {
                 //search through open files by name
                 var fuzzyFile = new RegExp(file.replace(/ /g, "").split("").map(function(char) {
-                    return char.replace(antiregex, "\\$1")
+                    return char.replace(antiregex, "\\$1");
                 }).join(".*?"), "i");
                 tabs = sessions.getAllTabs().filter(function(tab) {
                     return fuzzyFile.test(tab.fileName);
@@ -245,7 +429,7 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
 
                 var results = this.files.filter(function(path) {
                     var baseName = path.split(/[\/\\]/).pop();
-                    return exactBeginsBase.test(baseName)
+                    return exactBeginsBase.test(baseName);
                 });
                 if (results.length < sortResultsLimit) {
                     results.sort();
@@ -310,35 +494,45 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
 
             if (search) {
                 //find text in open tab(s)
+                this.toggleSearchAll(true);
+                var crawl;
                 try {
-                    var crawl = new RegExp(search.replace(antiregex, "\\$1"), "gi");
+                    crawl = new RegExp(search.replace(antiregex, "\\$1"), "gi");
                 }
                 catch (e) {
                     return;
                 }
+
                 var results = [];
-                tabs.forEach(function(t) {
-                    if (results.length >= findResultsLimit) return;
-                    var found;
-                    var lines = [];
-                    var text = self.getTabValues(t.tab).text;
-                    while (found = crawl.exec(text)) {
-                        var position = t.tab.doc.indexToPosition(found.index);
-                        if (lines.indexOf(position.row) > -1) {
-                            continue;
-                        }
-                        lines.push(position.row);
-                        var result = {
-                            tab: t.tab
-                        };
-                        result.label = result.tab.fileName;
-                        result.sublabel = sanitize(result.tab.getLine(position.row));
-                        result.line = position.row;
-                        results.push(result);
+                //my search all custom-- fired when click on search all
+                if (useSearchAll) {
+                    this.searchAllFiles(crawl);
+                    return;
+                }
+                else {
+                    tabs.forEach(function(t) {
                         if (results.length >= findResultsLimit) return;
-                    }
-                });
-                tabs = results;
+                        var found;
+                        var lines = [];
+                        var text = self.getTabValues(t.tab).text;
+                        while (found = crawl.exec(text)) {
+                            var position = t.tab.doc.indexToPosition(found.index);
+                            if (lines.indexOf(position.row) > -1) {
+                                continue;
+                            }
+                            lines.push(position.row);
+                            var result = {
+                                tab: t.tab
+                            };
+                            result.label = result.tab.fileName;
+                            result.sublabel = sanitize(result.tab.getLine(position.row));
+                            result.line = position.row;
+                            results.push(result);
+                            if (results.length >= findResultsLimit) return;
+                        }
+                    });
+                    tabs = results;
+                }
             }
             else if (reference !== false) {
                 //search by symbol reference
@@ -416,8 +610,14 @@ define(["sessions", "command", "editor", "settings!menus,user", "ui/statusbar", 
         },
 
         deactivate: function() {
-            this.element.removeClass("active");
-            if (this.pending) clearTimeout(this.pending);
+            var self = this;
+            setTimeout(function() {
+                if (self.DoNotBlur) { //morgan
+                    return;
+                }
+                self.element.removeClass("active");
+                if (self.pending) clearTimeout(self.pending);
+            }, 200);
         },
 
         navigateList: function(interval) {

@@ -107,6 +107,22 @@ function(state, addRemove, switching, bindEvents, editor, command, Settings, inf
             }
             return null;
         },
+        //morgan- finds a tab by path or returns null
+        getTabByPath: function(path) {
+            //the path stored on the tab is the actual file system path, not the relative path from project manager that is being passed as parameter
+            //input param exmaple:  "/CaretTern/js/ace/snippets/abap.js"
+            //tab.path example:     "I:\CaretTern\js\ace\snippets\abap.js"
+            path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
+            for (var i = 0; i < state.tabs.length; i++) {
+                try{
+                    if (state.tabs[i].path.indexOf(path) !== -1) { //NOTE: using contains here because the drive letter will be missing... could cause issues, TODO: make this cleaner!
+                        return state.tabs[i];
+                    }
+                }
+                catch(ex){}
+            }
+            return null;
+        },
         getFilenames: function() {
             return state.tabs.map(function(t) {
                 return t.fileName
