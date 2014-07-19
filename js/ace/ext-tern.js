@@ -459,13 +459,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         },
         /**
          * Sends request to tern server
-         * The guy who intially wrote this did a terrible job.. the request doesnt even get the editors current info for context
          * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
+         * @param {int} [timeout=1000] - timeout for the query
          */
-        request: function(editor, query, c, pos,forcePushChangedfile) {
+        request: function(editor, query, c, pos, forcePushChangedfile, timeout) {
             var self = this;
             var doc = findDoc(this, editor);
-            var request = buildRequest(this, doc, query, pos,forcePushChangedfile);
+            var request = buildRequest(this, doc, query, pos,forcePushChangedfile,timeout);
             //console.log('request',request);
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
@@ -590,8 +590,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * Build request to tern server
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
      * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
+     * @param {int} [timeout=1000] - timeout for the query
      */
-    function buildRequest(ts, doc, query, pos, forcePushChangedfile) {
+    function buildRequest(ts, doc, query, pos, forcePushChangedfile, timeout) {
         /*
          * the doc passed here is {changed:null, doc:Editor, name: "[doc]"}
          * not the same as editor.getSession().getDocument() which is: {$lines: array}  (the actual document content
@@ -664,7 +665,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return {
             query: query,
-            files: files
+            files: files,
+            timeout: timeout | 1000
         };
     }
 
@@ -914,7 +916,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 return;
             }
         }
-        ts.request(editor, "type", function(error, data) {
+        
+        var cb = function(error, data) {
             var tip = '';
             if (error) {
                 if (calledFromCursorActivity) {
@@ -959,7 +962,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 // setTimeout(function(){console.log('place after 1ms', getCusorPosForTooltip(editor));},1);
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
-        }, pos, !calledFromCursorActivity);
+        };
+        
+        ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity? 100: null));
     }
     
    /**
@@ -967,37 +972,77 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     * @param {function} [cb] - pass a callback to return find refs data result instead of showing tooltip, used internally by rename
     */
     function findRefs(ts, editor, cb) {
-        if(!inJavascriptMode(editor)){
+        if (!inJavascriptMode(editor)) {
             return;
         }
         ts.request(editor, {
             type: "refs",
             fullDocs: true
-        }, function (error, data) {
+        }, function(error, data) {
             if (error) return showError(ts, editor, error);
-            
+    
             //if callback, then send data and quit here
-            if(typeof cb === "function"){
+            if (typeof cb === "function") {
                 cb(data);
                 return;
             }
-            
+    
             //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
-            var r = data.name + '(' + data.type + ') References \n-----------------------------------------';
+            closeAllTips();
+            
+            //header.appendChild(elt('span','',)
+            var tip = makeTooltip(null, null, elt('span','',data.name + '(' + data.type + ') References'), editor, false, - 1);
+            //data.name + '(' + data.type + ') References \n-----------------------------------------'
+            
+            //add close button
+            var closeBtn = elt('span','','Close');
+            closeBtn.setAttribute('style','cursor:pointer; color:red; text-decoration:underline; float:right;');
+            closeBtn.addEventListener('click', function(){
+                remove(tip);
+            });
+            tip.appendChild(closeBtn);
+            //add divider
+            tip.appendChild(elt('div','','-----------------------------------------------'));
+            
             if (!data.refs || data.refs.length === 0) {
-                r += '<br/>' + 'No references found';
+                tip.appendChild(elt('div', '', 'No References Found'));
+                return;
             }
+            
+            var doc = findDoc(ts, editor);//get current doc ref
+            
+            //append line to tooltip for each refeerence
+            var addRefLine=function(file,start){
+                 var el = elt('div', '');
+                    el.textContent=  file + ' - line: ' + (start.line+1) + ' ch: ' + start.ch;//add 1 to line because editor does not use line 0
+                    el.setAttribute('style','cursor:pointer; color:blue;');
+                    el.addEventListener('click',function(){
+                        var updatePosDelay=300;
+                        var targetDoc = {
+                            name: file
+                        };
+                        if(doc.name == file){
+                          targetDoc=doc;//current doc  
+                          updatePosDelay=50;
+                        }
+                        moveTo(ts,doc,targetDoc, start,null,true);
+                        //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
+                        setTimeout(function(){
+                            moveTooltip(tip,null,null,editor);
+                        },updatePosDelay);
+                    });
+                    tip.appendChild(el);
+            };
+            
             for (var i = 0; i < data.refs.length; i++) {
                 var tmp = data.refs[i];
                 try {
-                    r += '\n' + tmp.file + ' - line: ' + tmp.start.line + ' ch: ' + tmp.start.ch;
+                    addRefLine(tmp.file, tmp.start);
                 }
                 catch (ex) {
                     log('findRefs inner loop error (should not happen)', ex);
                 }
             }
-            closeAllTips();
-            tempTooltip(editor, r, -1);
         });
     }
     
@@ -1498,11 +1543,26 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         editor.getSession().off('changeScrollLeft', closeThisTip);
                     }
                     catch (ex) {}
-                }
+                };
                 setTimeout(fadeThistip, fadeOutDuration);
             }
         }
         return node;
+    }
+    /**
+     * Moves an already open tooltip
+     * @param {element} tip
+     * @param {number} [x] - coordinate, leave blank to use current cusor pos
+     * @param {number} [y] - coordinate, leave blank to use current cusor pos
+     */
+    function moveTooltip(tip,x,y,editor){
+        if(x===null || y===null){
+            var location = getCusorPosForTooltip(editor);
+            x = location.left;
+            y = location.top;
+        }
+        tip.style.left = x+"px";
+        tip.style.top = y+"px";
     }
 
     function remove(node) {
@@ -1636,12 +1696,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Moves editor to a location (or a location in another document)
      * @param start - cursor location (can be tern or ace location as it will auto convert)
-     * @param end - cursor location (can be tern or ace location as it will auto convert)
+     * @param [end] - (if not passed, will use start) cursor location (can be tern or ace location as it will auto convert)
+     * @param {bool} [doNotCloseTip=false] - pass true to NOT close all tips
      */
-    function moveTo(ts, curDoc, doc, start, end) {
+    function moveTo(ts, curDoc, doc, start, end, doNotCloseTips) {
+        //DBG(arguments,true);
+        end = end || start;
         if (curDoc != doc) {
             if (ts.options.switchToDoc) {
-                closeAllTips();
+                if(!doNotCloseTips){
+                    closeAllTips();
+                }
                 //5.23.2014- added start  parameter to pass to child
                 ts.options.switchToDoc(doc.name, toAceLoc(start), toAceLoc(end));
             }
