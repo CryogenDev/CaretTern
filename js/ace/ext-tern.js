@@ -460,11 +460,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         /**
          * Sends request to tern server
          * The guy who intially wrote this did a terrible job.. the request doesnt even get the editors current info for context
+         * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
          */
-        request: function(editor, query, c, pos) {
+        request: function(editor, query, c, pos,forcePushChangedfile) {
             var self = this;
             var doc = findDoc(this, editor);
-            var request = buildRequest(this, doc, query, pos);
+            var request = buildRequest(this, doc, query, pos,forcePushChangedfile);
             //console.log('request',request);
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
@@ -509,6 +510,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * sends debug message to worker (TEMPORARY) for testing
          */
         debug: function(message) {
+            if(!message){
+                console.log('debug commands: files, filecontents');
+                return;
+            }
             if (!this.options.useWorker) return;
             this.server.sendDebug(message);
         },
@@ -584,8 +589,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * Build request to tern server
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
+     * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
      */
-    function buildRequest(ts, doc, query, pos) {
+    function buildRequest(ts, doc, query, pos, forcePushChangedfile) {
         /*
          * the doc passed here is {changed:null, doc:Editor, name: "[doc]"}
          * not the same as editor.getSession().getDocument() which is: {$lines: array}  (the actual document content
@@ -618,9 +624,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         // log('doc',doc);
         var startPos = query.start || query.end;
+        
         if (doc.changed) {
+            
+            //forcePushChangedfile && = HACK- for some reason the definition is not working properly with large files while pushing only a fragment... need to fix this! until then, we are just pushing the whole file, which is very inefficient
             //doc > 250 lines & doNot allow fragments & less than 100 lines changed and something else....
-            if (doc.doc.session.getLength() > bigDoc && allowFragments !== false && doc.changed.to - doc.changed.from < 100 && doc.changed.from <= startPos.line && doc.changed.to > query.end.line) {
+            if (!forcePushChangedfile && doc.doc.session.getLength() > bigDoc && allowFragments !== false && doc.changed.to - doc.changed.from < 100 && doc.changed.from <= startPos.line && doc.changed.to > query.end.line) {
                 files.push(getFragmentAround(doc, startPos, query.end));
                 query.file = "#0";
                 var offsetLines = files[0].offsetLines;
@@ -641,17 +650,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             query.file = doc.name;
         }
 
-        //TODO: need to add tracking of changes , until then, always push this file
-        /*  files.push({
-            type: "full",
-            name: doc.name,
-            text: docValue(ts, doc)
-        });
-        query.file = doc.name;
-        doc.changed = null;
-        */
-
-
         //push changes of any docs on server that are NOT this doc so that they are up to date for tihs request
         for (var name in ts.docs) {
             var cur = ts.docs[name];
@@ -664,7 +662,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 cur.changed = null;
             }
         }
-
         return {
             query: query,
             files: files
@@ -962,7 +959,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 // setTimeout(function(){console.log('place after 1ms', getCusorPosForTooltip(editor));},1);
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
-        }, pos);
+        }, pos, !calledFromCursorActivity);
     }
     
    /**
@@ -1589,7 +1586,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             };
             var doc = findDoc(ts, editor);
             //this calls  function findDef(srv, query, file) {
-            ts.server.request(buildRequest(ts, doc, req), function(error, data) {
+            ts.server.request(buildRequest(ts, doc, req,null, true), function(error, data) {
                 //DBG(arguments, true);//REMOVE
                 /**
                  *  both the data.origin and data.file seem to contain the full path to the location of what we need to jump to
@@ -1793,7 +1790,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return str.slice(0, token.length).toUpperCase() == token.toUpperCase();
     }
 
-
+    /**
+     * track changes of document
+     * @param {ternServer} ts
+     * @param {ternDoc} doc
+     * @param {aceChangeData} change - change even from ace
+     */
     function trackChange(ts, doc, change) {
         //NOTE get value: editor.ternServer.docs['[doc]'].doc.session.getValue()
 
@@ -1813,9 +1815,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         //log('data', data);//-- gets current doc on tern server, value can be otained by : data.doc.session.getValue()
         var argHints = ts.cachedArgHints;
 
+    
         if (argHints && argHints.doc == doc && cmpPos(argHints.start, _change.to) <= 0) {
             ts.cachedArgHints = null;
-            //log('removing cached arg hints');
+            //remove cached arghints if a change occured before the start of the function call of the current arg hitns
         }
 
         var changed = data.changed; //data is the tern server doc, which keeps a changed property, which is null here

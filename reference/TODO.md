@@ -24,7 +24,8 @@ palette.js //find text in open tab(s) -- make search all js files.. still not do
 10. find refs: make the tooltip not auto close, but include a close button, and make clicking on ref jump to definition!
 11. rename: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
 12. rename: only works for current file right now... need to fix
-13. 
+13. ext-tern.js:  forcePushChangedfile && = HACK- for some reason the definition is not working properly with large files while pushing only a fragment... need to fix this! until then, we are just pushing the whole file, which is very inefficient
+14. make tern not freak out for large files... maybe auto disable autoShowType when file exceeds certain length or has .min in the name
 
 
 ##Tern Issues
