@@ -990,54 +990,105 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
             closeAllTips();
             
-            //header.appendChild(elt('span','',)
-            var tip = makeTooltip(null, null, elt('span','',data.name + '(' + data.type + ') References'), editor, false, - 1);
+            
+            var header = document.createElement("div");
+            var title = document.createElement("span");
+            title.textContent=data.name + '(' + data.type + ')';
+            title.setAttribute("style","font-weight:bold;");
+            header.appendChild(title);
+            
+            var tip = makeTooltip(null, null, header, editor, false, - 1);
             //data.name + '(' + data.type + ') References \n-----------------------------------------'
             
             //add close button
-            var closeBtn = elt('span','','Close');
-            closeBtn.setAttribute('style','cursor:pointer; color:red; text-decoration:underline; float:right;');
+            var closeBtn = elt('span','','close');
+            closeBtn.setAttribute('style','cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
             closeBtn.addEventListener('click', function(){
                 remove(tip);
             });
-            tip.appendChild(closeBtn);
+            header.appendChild(closeBtn);
+            
             //add divider
-            tip.appendChild(elt('div','','-----------------------------------------------'));
+            //tip.appendChild(elt('div','','-----------------------------------------------'));
             
             if (!data.refs || data.refs.length === 0) {
                 tip.appendChild(elt('div', '', 'No References Found'));
                 return;
             }
             
+            //total refs
+            var totalRefs = document.createElement("div");
+            totalRefs.setAttribute("style", "font-style:italic; margin-bottom:3px;");
+            totalRefs.innerHTML = data.refs.length +" References Found";
+            header.appendChild(totalRefs);
+            
             var doc = findDoc(ts, editor);//get current doc ref
+            
+            //create select input for showing refs
+            var refInput= document.createElement("select");
+            refInput.setAttribute("multiple","multiple");
+            refInput.addEventListener("change", function(){
+                var el = this,
+                    selected;
+                for (var i = 0; i < el.options.length; i++) {
+                    //only allow 1 selected item
+                    if (selected) {
+                        el[i].selected = false;
+                        continue;
+                    }
+                    //once an item has been selected, grey it out
+                    if (el[i].selected) {
+                        selected = el[i];
+                        selected.style.color = "grey";
+                    }
+                }
+                //read data attributes from selected item
+                var file = selected.getAttribute("data-file");
+                var start = {
+                    "line": selected.getAttribute("data-line"),
+                    "ch": selected.getAttribute("data-ch")
+                };
+                var updatePosDelay = 300;
+                var targetDoc = {
+                    name: file
+                };
+                if (doc.name == file) {
+                    targetDoc = doc; //current doc  
+                    updatePosDelay = 50;
+                }
+                moveTo(ts, doc, targetDoc, start, null, true);
+                //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
+                setTimeout(function() {
+                    moveTooltip(tip, null, null, editor);
+                    closeAllTips(tip);//close any tips that moving this might open, except for the ref tip
+                }, updatePosDelay);
+            });
             
             //append line to tooltip for each refeerence
             var addRefLine=function(file,start){
-                 var el = elt('div', '');
-                    el.textContent=  file + ' - line: ' + (start.line+1) + ' ch: ' + start.ch;//add 1 to line because editor does not use line 0
-                    el.setAttribute('style','cursor:pointer; color:blue;');
-                    el.addEventListener('click',function(){
-                        var updatePosDelay=300;
-                        var targetDoc = {
-                            name: file
-                        };
-                        if(doc.name == file){
-                          targetDoc=doc;//current doc  
-                          updatePosDelay=50;
-                        }
-                        moveTo(ts,doc,targetDoc, start,null,true);
-                        //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
-                        setTimeout(function(){
-                            moveTooltip(tip,null,null,editor);
-                        },updatePosDelay);
-                    });
-                    tip.appendChild(el);
+                var el = document.createElement("option");
+                el.setAttribute("data-file",file);
+                el.setAttribute("data-line",start.line);
+                el.setAttribute("data-ch",start.ch);
+                el.text = (start.line+1)+":"+start.ch+" - " + file;//add 1 to line because editor does not use line 0
+                refInput.appendChild(el);
+            };
+            
+            //finalize the input after all options are added
+            var finalizeRefInput=function(){
+                 var height = (refInput.options.length *15);
+                 height = height> 175? 175: height;
+                 refInput.style.height=height+"px";
+                 tip.appendChild(refInput);
             };
             
             for (var i = 0; i < data.refs.length; i++) {
                 var tmp = data.refs[i];
                 try {
                     addRefLine(tmp.file, tmp.start);
+                    if (i === data.refs.length-1){
+                      finalizeRefInput();
+                    }
                 }
                 catch (ex) {
                     log('findRefs inner loop error (should not happen)', ex);
@@ -1468,14 +1519,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return e;
     }
+    
     /**
-     *Closes any open tooltips
+     * Closes any open tern tooltips
+     * @param {element} [except] - pass an element that should NOT be closed to close all except this
      */
-
-    function closeAllTips() {
+    function closeAllTips(except) {
         var tips = document.querySelectorAll('.' + cls + 'tooltip');
         if (tips.length > 0) {
             for (var i = 0; i < tips.length; i++) {
+                if(except && tips[i] == except){
+                    continue;
+                }
                 remove(tips[i]);
             }
         }
