@@ -16,7 +16,7 @@
     },
     "permissions": ["clipboardRead", "clipboardWrite", "contextMenus", "storage", "notifications", "syncFileSystem", {
         "fileSystem": ["write", "retainEntries", "directory"]
-    }],
+    }, "*://*/*"],
     "kiosk_enabled": false,
     "offline_enabled": true,
     "file_handlers": {
