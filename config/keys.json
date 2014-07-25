@@ -135,6 +135,9 @@
     "Ctrl-Shift-E": {
         "ace": "ternRename"
     },
+    "Alt-R": {
+        "ace": "ternRefresh"
+    },
     "f1": {
         "ace": "foldOther"
     },

@@ -356,6 +356,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 editor.ternServer.rename(editor);
             },
             bindKey: "Ctrl-Shift-E"
+        },
+        ternRefresh: {
+            name: "ternRefresh",
+            exec: function(editor) {
+                editor.ternServer.refreshDoc(editor);
+            },
+            bindKey: "Alt-R"
         }
     };
 
@@ -399,10 +406,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         delDoc: function(name) {
             var found = this.docs[name];
             if (!found) return;
-            try{//stop tracking changes
+            try { //stop tracking changes
                 found.doc.off("change", this.trackChange);
             }
-            catch(ex){}
+            catch (ex) {}
             delete this.docs[name];
             this.server.delFile(name);
         },
@@ -413,6 +420,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             closeAllTips();
             var found = this.docs[name];
             if (found && found.changed) sendDoc(this, found);
+        },
+        /**
+         * Refreshes current document on tern server (forces send, useful for debugging as ideally this should not be
+         *
+         */
+        refreshDoc: function(editor) {
+            var doc = findDoc(this, editor);
+            sendDoc(this,doc);
+            var el = document.createElement('span');
+            el.setAttribute('style','color:green;');
+            el.innerHTML="Tern document refreshed";
+            tempTooltip(editor,el,1000);
         },
         /**
          * Gets completions to display in editor when Ctrl+Space is pressed; This is called by
@@ -450,7 +469,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         /**
          * Finds references to variable at current cursor location and shows tooltip
          */
-        findRefs: function (editor) {
+        findRefs: function(editor) {
             findRefs(this, editor);
         },
 
@@ -465,7 +484,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         request: function(editor, query, c, pos, forcePushChangedfile, timeout) {
             var self = this;
             var doc = findDoc(this, editor);
-            var request = buildRequest(this, doc, query, pos,forcePushChangedfile,timeout);
+            var request = buildRequest(this, doc, query, pos, forcePushChangedfile, timeout);
             //console.log('request',request);
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
@@ -510,7 +529,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * sends debug message to worker (TEMPORARY) for testing
          */
         debug: function(message) {
-            if(!message){
+            if (!message) {
                 console.log('debug commands: files, filecontents');
                 return;
             }
@@ -625,9 +644,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         // log('doc',doc);
         var startPos = query.start || query.end;
-        
+
         if (doc.changed) {
-            
+
             //forcePushChangedfile && = HACK- for some reason the definition is not working properly with large files while pushing only a fragment... need to fix this! until then, we are just pushing the whole file, which is very inefficient
             //doc > 250 lines & doNot allow fragments & less than 100 lines changed and something else....
             if (!forcePushChangedfile && doc.doc.session.getLength() > bigDoc && allowFragments !== false && doc.changed.to - doc.changed.from < 100 && doc.changed.from <= startPos.line && doc.changed.to > query.end.line) {
@@ -901,8 +920,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-    
-     /**
+
+    /**
      * shows type info
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
      */
@@ -916,7 +935,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 return;
             }
         }
-        
+
         var cb = function(error, data) {
             var tip = '';
             if (error) {
@@ -963,14 +982,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
         };
-        
-        ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity? 100: null));
+
+        ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
     }
-    
-   /**
-    * Finds all references to the current token
-    * @param {function} [cb] - pass a callback to return find refs data result instead of showing tooltip, used internally by rename
-    */
+
+    /**
+     * Finds all references to the current token
+     * @param {function} [cb] - pass a callback to return find refs data result instead of showing tooltip, used internally by rename
+     */
     function findRefs(ts, editor, cb) {
         if (!inJavascriptMode(editor)) {
             return;
@@ -980,54 +999,54 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             fullDocs: true
         }, function(error, data) {
             if (error) return showError(ts, editor, error);
-    
+
             //if callback, then send data and quit here
             if (typeof cb === "function") {
                 cb(data);
                 return;
             }
-    
+
             //data comes back with name,type,refs{start(ch,line),end(ch,line),file},
             closeAllTips();
-            
-            
+
+
             var header = document.createElement("div");
             var title = document.createElement("span");
-            title.textContent=data.name + '(' + data.type + ')';
-            title.setAttribute("style","font-weight:bold;");
+            title.textContent = data.name + '(' + data.type + ')';
+            title.setAttribute("style", "font-weight:bold;");
             header.appendChild(title);
-            
+
             var tip = makeTooltip(null, null, header, editor, false, - 1);
             //data.name + '(' + data.type + ') References \n-----------------------------------------'
-            
+
             //add close button
-            var closeBtn = elt('span','','close');
-            closeBtn.setAttribute('style','cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
-            closeBtn.addEventListener('click', function(){
+            var closeBtn = elt('span', '', 'close');
+            closeBtn.setAttribute('style', 'cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
+            closeBtn.addEventListener('click', function() {
                 remove(tip);
             });
             header.appendChild(closeBtn);
-            
+
             //add divider
             //tip.appendChild(elt('div','','-----------------------------------------------'));
-            
+
             if (!data.refs || data.refs.length === 0) {
                 tip.appendChild(elt('div', '', 'No References Found'));
                 return;
             }
-            
+
             //total refs
             var totalRefs = document.createElement("div");
             totalRefs.setAttribute("style", "font-style:italic; margin-bottom:3px;");
-            totalRefs.innerHTML = data.refs.length +" References Found";
+            totalRefs.innerHTML = data.refs.length + " References Found";
             header.appendChild(totalRefs);
-            
-            var doc = findDoc(ts, editor);//get current doc ref
-            
+
+            var doc = findDoc(ts, editor); //get current doc ref
+
             //create select input for showing refs
-            var refInput= document.createElement("select");
-            refInput.setAttribute("multiple","multiple");
-            refInput.addEventListener("change", function(){
+            var refInput = document.createElement("select");
+            refInput.setAttribute("multiple", "multiple");
+            refInput.addEventListener("change", function() {
                 var el = this,
                     selected;
                 for (var i = 0; i < el.options.length; i++) {
@@ -1053,41 +1072,41 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     name: file
                 };
                 if (doc.name == file) {
-                    targetDoc = doc; //current doc  
+                    targetDoc = doc; //current doc
                     updatePosDelay = 50;
                 }
                 moveTo(ts, doc, targetDoc, start, null, true);
                 //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
                 setTimeout(function() {
                     moveTooltip(tip, null, null, editor);
-                    closeAllTips(tip);//close any tips that moving this might open, except for the ref tip
+                    closeAllTips(tip); //close any tips that moving this might open, except for the ref tip
                 }, updatePosDelay);
             });
-            
+
             //append line to tooltip for each refeerence
-            var addRefLine=function(file,start){
+            var addRefLine = function(file, start) {
                 var el = document.createElement("option");
-                el.setAttribute("data-file",file);
-                el.setAttribute("data-line",start.line);
-                el.setAttribute("data-ch",start.ch);
-                el.text = (start.line+1)+":"+start.ch+" - " + file;//add 1 to line because editor does not use line 0
+                el.setAttribute("data-file", file);
+                el.setAttribute("data-line", start.line);
+                el.setAttribute("data-ch", start.ch);
+                el.text = (start.line + 1) + ":" + start.ch + " - " + file; //add 1 to line because editor does not use line 0
                 refInput.appendChild(el);
             };
-            
+
             //finalize the input after all options are added
-            var finalizeRefInput=function(){
-                 var height = (refInput.options.length *15);
-                 height = height> 175? 175: height;
-                 refInput.style.height=height+"px";
-                 tip.appendChild(refInput);
+            var finalizeRefInput = function() {
+                var height = (refInput.options.length * 15);
+                height = height > 175 ? 175 : height;
+                refInput.style.height = height + "px";
+                tip.appendChild(refInput);
             };
-            
+
             for (var i = 0; i < data.refs.length; i++) {
                 var tmp = data.refs[i];
                 try {
                     addRefLine(tmp.file, tmp.start);
-                    if (i === data.refs.length-1){
-                      finalizeRefInput();
+                    if (i === data.refs.length - 1) {
+                        finalizeRefInput();
                     }
                 }
                 catch (ex) {
@@ -1096,7 +1115,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-    
+
     /**
      * Renames variable at current location
      *
@@ -1104,7 +1123,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function rename(ts, editor) {
         /*var token = editor.getTokenAt(editor.getCursor());
             if (!/\w/.test(token.string)) showError(ts, editor, "Not at a variable");*/
-    
+
         findRefs(ts, editor, function(r) {
             if (!r || r.refs.length === 0) {
                 showError(ts, editor, "Cannot rename as no references were found for this variable");
@@ -1114,9 +1133,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 showError(ts, editor, "Cannot rename global variable yet (variables in different source files cannot be renamed YET, its on TODO list");
                 return;
             }*/
-            
+
             //execute rename
-            var executeRename = function(newName){
+            var executeRename = function(newName) {
                 ts.request(editor, {
                     type: "rename",
                     newName: newName,
@@ -1140,18 +1159,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     });
                 });
             };
-            
+
             //create tooltip to get new name from user
-            var tip = makeTooltip(null, null, elt("div", "", r.name +": " + r.refs.length + " references found \n (WARNING: this wont work for refs in another file!) \n\n Enter new name:\n"), editor, true);
+            var tip = makeTooltip(null, null, elt("div", "", r.name + ": " + r.refs.length + " references found \n (WARNING: this wont work for refs in another file!) \n\n Enter new name:\n"), editor, true);
             var newNameInput = elt('input');
             tip.appendChild(newNameInput);
-            try{
+            try {
                 setTimeout(function() {
                     newNameInput.focus();
                 }, 100);
             }
-            catch(ex){}
-    
+            catch (ex) {}
+
             var goBtn = elt('button', '');
             goBtn.textContent = "Rename";
             goBtn.setAttribute("type", "button");
@@ -1159,17 +1178,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 remove(tip);
                 var newName = newNameInput.value;
                 //TODO: add validation of new name (run method that removes invalid varaible names then compare to user input, if dont match then show error)
-                if(!newName || newName.trim().length ===0){
-                    showError(ts,editor,"new name cannot be empty");
+                if (!newName || newName.trim().length === 0) {
+                    showError(ts, editor, "new name cannot be empty");
                     return;
                 }
-                
+
                 executeRename(newName);
             });
             tip.appendChild(goBtn);
         });
     }
-    
+
     var nextChangeOrig = 0;
     /**
      * Applys changes for a variable rename.
@@ -1177,21 +1196,21 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * TODO: this only works for current file at the moment!
      */
     function applyChanges(ts, changes, cb) {
-        log('changes',changes);
-        var Range = ace.require("ace/range").Range;//for ace
+        log('changes', changes);
+        var Range = ace.require("ace/range").Range; //for ace
         var perFile = Object.create(null);
         for (var i = 0; i < changes.length; ++i) {
             var ch = changes[i];
             (perFile[ch.file] || (perFile[ch.file] = [])).push(ch);
         }
-        
+
         //result for callback
-        var result={
+        var result = {
             replaced: 0,
             status: "",
-            errors:""
+            errors: ""
         };
-        
+
         for (var file in perFile) {
             var known = ts.docs[file],
                 chs = perFile[file];;
@@ -1201,12 +1220,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             });
             var origin = "*rename" + (++nextChangeOrig);
             for (var i = 0; i < chs.length; ++i) {
-                try{
+                try {
                     var ch = chs[i];
                     //known.doc.replaceRange(ch.text, ch.start, ch.end, origin);
                     //console.log('ch.text: ' , ch.text , ' ;ch.start: ' , ch.start,' ;ch.end: ' , ch.end ,' ;origin: ' , origin );
                     //NOTE: the origin is used for CodeMirror: When origin is given, it will be passed on to "change" events, and its first letter will be used to determine whether this change can be merged with previous history events, in the way described for selection origins. -- example of origin: *rename1  (TODO: see if ace has some change origin for better history undo)
-                
+
                     //ch.start and ch.end are {line,ch}
                     ch.start = toAceLoc(ch.start);
                     ch.end = toAceLoc(ch.end);
@@ -1214,13 +1233,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     known.doc.session.replace(new Range(ch.start.row, ch.start.column, ch.end.row, ch.end.column), ch.text);
                     result.replaced++;
                 }
-                catch(ex){
-                       result.errors+= '\n ' + file+ ' - ' + ex.toString();
-                       log('error applying rename changes', ex);
+                catch (ex) {
+                    result.errors += '\n ' + file + ' - ' + ex.toString();
+                    log('error applying rename changes', ex);
                 }
             }
         }
-        if(typeof cb ==="function"){
+        if (typeof cb === "function") {
             cb(result);
         }
     }
@@ -1487,7 +1506,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     //#region tooltips
-    
+
 
     /**
      * returns the difference of posistion a - posistion b (returns difference in line if any, then difference in ch if any)
@@ -1519,7 +1538,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return e;
     }
-    
+
     /**
      * Closes any open tern tooltips
      * @param {element} [except] - pass an element that should NOT be closed to close all except this
@@ -1528,7 +1547,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var tips = document.querySelectorAll('.' + cls + 'tooltip');
         if (tips.length > 0) {
             for (var i = 0; i < tips.length; i++) {
-                if(except && tips[i] == except){
+                if (except && tips[i] == except) {
                     continue;
                 }
                 remove(tips[i]);
@@ -1558,7 +1577,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {int} [faceOutDuration] - pass a number to make the tooltip fade out (make it temporary)
      */
     function makeTooltip(x, y, content, editor, closeOnCusorActivity, fadeOutDuration) {
-        if(x===null || y===null){
+        if (x === null || y === null) {
             var location = getCusorPosForTooltip(editor);
             x = location.left;
             y = location.top;
@@ -1610,14 +1629,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {number} [x] - coordinate, leave blank to use current cusor pos
      * @param {number} [y] - coordinate, leave blank to use current cusor pos
      */
-    function moveTooltip(tip,x,y,editor){
-        if(x===null || y===null){
+    function moveTooltip(tip, x, y, editor) {
+        if (x === null || y === null) {
             var location = getCusorPosForTooltip(editor);
             x = location.left;
             y = location.top;
         }
-        tip.style.left = x+"px";
-        tip.style.top = y+"px";
+        tip.style.left = x + "px";
+        tip.style.top = y + "px";
     }
 
     function remove(node) {
@@ -1663,8 +1682,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         catch (ex) {
             setTimeout(function() {
-                if(typeof msg === undefined){
-                    msg =" (no error passed)";
+                if (typeof msg === undefined) {
+                    msg = " (no error passed)";
                 }
                 throw new Error('tern show error failed.' + msg + '\n\n fail error:' + ex);
             }, 0);
@@ -1701,7 +1720,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             };
             var doc = findDoc(ts, editor);
             //this calls  function findDef(srv, query, file) {
-            ts.server.request(buildRequest(ts, doc, req,null, true), function(error, data) {
+            ts.server.request(buildRequest(ts, doc, req, null, true), function(error, data) {
                 //DBG(arguments, true);//REMOVE
                 /**
                  *  both the data.origin and data.file seem to contain the full path to the location of what we need to jump to
@@ -1759,7 +1778,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         end = end || start;
         if (curDoc != doc) {
             if (ts.options.switchToDoc) {
-                if(!doNotCloseTips){
+                if (!doNotCloseTips) {
                     closeAllTips();
                 }
                 //5.23.2014- added start  parameter to pass to child
@@ -1856,7 +1875,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return /\w/.test(editor.session.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
         //return /\w/.test(editor.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
     }
-    
+
     //#endregion
 
     /**
@@ -1935,7 +1954,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         //log('data', data);//-- gets current doc on tern server, value can be otained by : data.doc.session.getValue()
         var argHints = ts.cachedArgHints;
 
-    
+
         if (argHints && argHints.doc == doc && cmpPos(argHints.start, _change.to) <= 0) {
             ts.cachedArgHints = null;
             //remove cached arghints if a change occured before the start of the function call of the current arg hitns
@@ -2165,7 +2184,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 var final = pathPart1 + "\\" + path;
                 final = final.replace(/\\/g, '/'); //back to forward slashes (ghetto)
-               // console.log('final:', final);
+                // console.log('final:', final);
 
                 //check project directoires to get relative path to project directory
                 for (var i = 0; i < projectDirectories.length; i++) {
@@ -2179,7 +2198,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         //console.log('NOT in dir=' + dir);
                     }
                 }
-               // console.log('final relative to project:', final);
+                // console.log('final relative to project:', final);
                 return final;
             }
             catch (ex) {
@@ -2199,7 +2218,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     xhr.onreadystatechange = function() {
                         if (xhr.readyState == 4) {
                             console.log('adding web reference: ' + path);
-                           // alert('adding web reference: ' + path);
+                            // alert('adding web reference: ' + path);
                             editor.ternServer.addDoc(path.replace(/^.*[\\\/]/, ''), xhr.responseText);
                         }
                     };
@@ -2213,7 +2232,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             //log('get file data', data);
                             editor.ternServer.addDoc(path, data.toString());
                             //alert('adding reference: '+ path);
-                            console.log('adding reference: '+ path);
+                            console.log('adding reference: ' + path);
                         }
                     });
                 }
