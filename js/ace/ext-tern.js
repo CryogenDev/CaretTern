@@ -135,7 +135,7 @@ function(require, exports, module) {
     //#region Tern
     var TernServer = require("../tern").TernServer;
     var aceTs = new TernServer({
-        defs: ['browser', 'ecma5'],/*9.25.2014- removed jquery.. just include it as src if needed as it gets in the way 'jquery'*/
+        defs: ['jquery','browser', 'ecma5'],
         plugins: {
             doc_comment: true,
             /*requirejs: {
