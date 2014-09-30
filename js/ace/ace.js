@@ -6985,7 +6985,6 @@ EventEmitter._dispatchEvent = function(eventName, e) {
         if (e.propagationStopped)
             break;
     }
-    
     if (defaultHandler && !e.defaultPrevented)
         return defaultHandler(e, this);
 };

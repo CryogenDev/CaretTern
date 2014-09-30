@@ -94,7 +94,7 @@ function(require, exports, module) {
     var Autocomplete = require("../autocomplete").Autocomplete;
     Autocomplete.startCommand = {
         name: "startAutocomplete",
-        exec: function(editor) {
+        exec: function(editor,e) {
             if (!editor.completer) {
                 editor.completer = new Autocomplete();
             }
@@ -309,6 +309,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.jumpStack = [];
         //9.30.2014- set when mode changes and tern is enabled, this is the built in ace text completor
         this.aceTextCompletor=null;
+        //9.30.2014- set every time auto complete is fired. used to include all completions if fired twice in one second
+        this.lastAutoCompleteFireTime=null;
     };
 
     //#region helpers
@@ -775,6 +777,26 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: current implmentation of this has this method being called by the language_tools as a completor
      */
     function getCompletions(ts, editor, session, pos, prefix, callback) {
+        //9.30.2014- if auto complete fired twice in threshold (defualt 1 second, TODO: add setting for this), then include all text completions; The time is from the last time auto complete finished gettin completions to the time this event was fired
+        var autoCompleteFiredTwiceInThreshold = function() {
+            try {
+                var t = ts.lastAutoCompleteFireTime;
+                if (!t) {
+                    return false;
+                }
+                var msPassed = new Date().getTime() - t;
+                //console.log('msPassed',msPassed);
+                if (msPassed < 2000) {//less than 2 seconds
+                    return true;
+                }
+            }
+            catch (ex) {
+                showError('autoCompleteFiredTwiceInThreshold error:' + ex);
+            }
+            return false;
+        };
+        var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold(); 
+        
         // console.log('getCompletions entered');
         ts.request(editor, {
             type: "completions",
@@ -788,9 +810,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             guess: true,
             expandWordForward: true
         },
-
+    
         function(error, data) {
-            //DBG(arguments,true);
             if (error) {
                 return showError(ts, editor, error);
             }
@@ -808,8 +829,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                 };
             });
-
-
+    
+    
             //#region OtherCompletions
             var otherCompletions = [];
             //if basic auto completion is on, then get keyword completions that are not found in tern results
@@ -821,15 +842,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-            
-            var forceEnableAceTextCompletor=false;//for testing
-            if((forceEnableAceTextCompletor || ternCompletions.length < 5) && ts.aceTextCompletor){
+    
+    
+            if ((forceEnableAceTextCompletor || ternCompletions.length < 5) && ts.aceTextCompletor) {
                 //console.time('aceTextCompletor');
-                var textCompletions=[];
+                var textCompletions = [];
                 //9.30.2014- sometimes tern just fails with complex javascript.. If this is the case, lets use the built in ace text completor to get information instead of the more advanced 'local strings' below;
                 //this is only used when tern fails as it will contain stuff that tern should already contain, but when tern fails this stuff is all missing so get it how ever we can
                 //note that this can easily take 100ms to get these completions and merge them
-                try{
+                try {
                     ts.aceTextCompletor.getCompletions(editor, session, pos, prefix, function(error, data) {
                         textCompletions = data.map(function(item) {
                             return {
@@ -842,22 +863,22 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             };
                         });
                         //returns true if passed value already exists in otherCompletions
-                        var otherCompletionsContains= function(value,minLength){
+                        var otherCompletionsContains = function(value, minLength) {
                             value = value.toLowerCase().trim();
-                            if(value.length <2){
+                            if (value.length < 2) {
                                 //dont want 1 character completions!
                                 return true;
                             }
-                            var isDupe=false;
+                            var isDupe = false;
                             for (var i = 0; i < otherCompletions.length; i++) {
-                                if(otherCompletions[i].value.toString().toLowerCase() ==value){
-                                    isDupe=true;
+                                if (otherCompletions[i].value.toString().toLowerCase() == value) {
+                                    isDupe = true;
                                     break;
                                 }
                             }
                             return isDupe;
                         };
-                        
+    
                         //merge with other completions
                         for (var z = 0; z < textCompletions.length; z++) {
                             var item = textCompletions[z];
@@ -868,13 +889,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                     });
                 }
-                catch(ex){
-                    showError(ts,editor,'ace text completor error:' + ex);
+                catch (ex) {
+                    showError(ts, editor, 'ace text completor error:' + ex);
                 }
                 //console.log('textCompletions',textCompletions); console.log('otherCompletions',otherCompletions);
                 //console.timeEnd('aceTextCompletor');
             }
-            else{
+            else {
                 //add local string completions if enabled, this is far more useful than the local text completions
                 // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
                 var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
@@ -909,7 +930,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
             }
-
+    
             //now merge other completions with tern (tern has priority)
             //tested on 5,000 line doc with all other completions and takes about ~10ms
             if (otherCompletions.length > 0) {
@@ -930,18 +951,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 ternCompletions = mergedCompletions.slice();
             }
             //#endregion
-
-
+    
+    
             //callback goes to the lang tools completor
             callback(null, ternCompletions);
-
+    
             var tooltip = null;
             //COMEBACK: also need to bind popup close and update (update likely means when the tooltip has to move) (and hoever over items should move tooltip)
-
+    
             if (!bindPopupSelect()) {
                 popupSelectionChanged(); //call once if popupselect bound exited to show tooltip for first item
             }
-
+    
             //binds popup selection change, which cant be done until first time popup is created
             function bindPopupSelect() {
                 if (popupSelectBound) {
@@ -959,7 +980,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 popupSelectBound = true; //prevent rebinding
             }
             //fired on popup selection change
-
             function popupSelectionChanged() {
                 closeAllTips(); //remove(tooltip); //using close all , but its slower, comeback and remove single if its working right
                 //gets data of currently selected completion
@@ -975,6 +995,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 node.getBoundingClientRect().top + window.pageYOffset, data.doc);
                 tooltip.className += " " + cls + "hint-doc";
             }
+    
+            //9.30.2014- track last time auto complete was fired
+            try {
+                ts.lastAutoCompleteFireTime = new Date().getTime();
+            }
+            catch (ex) {
+                showError(ts, editor, 'error with last autoCompleteFireTime: ' + ex);
+            }
+    
         });
     }
 
