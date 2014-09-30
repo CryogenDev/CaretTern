@@ -108,6 +108,7 @@ function(require, exports, module) {
                 //enable tern based on mode
                 if (editor.ternServer.enabledAtCurrentLocation(editor)) {
                     editor.completers.push(editor.ternServer);
+                    editor.ternServer.aceTextCompletor = textCompleter;//9.30.2014- give tern the text completor//console.log('textCompleter',textCompleter);
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
@@ -260,7 +261,7 @@ function(require, exports, module) {
  *  tern server plugin for ace
  */
 ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function(require, exports, module) {
-
+    
     //#region TernServerPublic
 
     /**
@@ -306,6 +307,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.cachedArgHints = null;
         this.activeArgHints = null;
         this.jumpStack = [];
+        //9.30.2014- set when mode changes and tern is enabled, this is the built in ace text completor
+        this.aceTextCompletor=null;
     };
 
     //#region helpers
@@ -818,34 +821,88 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-
-            //add local string completions if enabled, this is far more useful than the local text completions
-            // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
-            var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
-            if (ternLocalStringMinLength > 0) {
-                for (var i = 0; i < editor.session.getLength(); i++) {
-                    var tokens = editor.session.getTokens(i);
-                    for (var n = 0; n < tokens.length; n++) {
-                        var t = tokens[n];
-                        if (t.type === 'string') {
-                            var val = t.value.toString().substr(1, t.value.length - 2).trim(); //remove first and last quotes
-                            if (val.length >= ternLocalStringMinLength && val.indexOf(' ') === -1 && val.indexOf('\'') === -1 && val.indexOf('"') === -1) {
-                                var isDuplicate = false;
-                                if (otherCompletions.length > 0) {
-                                    for (var x = 0; x < otherCompletions.length; x++) {
-                                        if (otherCompletions[x].value.toString() === val) {
-                                            isDuplicate = true;
-                                            break;
+            
+            var forceEnableAceTextCompletor=false;//for testing
+            if((forceEnableAceTextCompletor || ternCompletions.length < 5) && ts.aceTextCompletor){
+                //console.time('aceTextCompletor');
+                var textCompletions=[];
+                //9.30.2014- sometimes tern just fails with complex javascript.. If this is the case, lets use the built in ace text completor to get information instead of the more advanced 'local strings' below;
+                //this is only used when tern fails as it will contain stuff that tern should already contain, but when tern fails this stuff is all missing so get it how ever we can
+                //note that this can easily take 100ms to get these completions and merge them
+                try{
+                    ts.aceTextCompletor.getCompletions(editor, session, pos, prefix, function(error, data) {
+                        textCompletions = data.map(function(item) {
+                            return {
+                                doc: item.doc,
+                                type: item.type,
+                                caption: item.name,
+                                value: item.name,
+                                /*score: -1*/
+                                meta: 'aceTextCompletor'
+                            };
+                        });
+                        //returns true if passed value already exists in otherCompletions
+                        var otherCompletionsContains= function(value,minLength){
+                            value = value.toLowerCase().trim();
+                            if(value.length <2){
+                                //dont want 1 character completions!
+                                return true;
+                            }
+                            var isDupe=false;
+                            for (var i = 0; i < otherCompletions.length; i++) {
+                                if(otherCompletions[i].value.toString().toLowerCase() ==value){
+                                    isDupe=true;
+                                    break;
+                                }
+                            }
+                            return isDupe;
+                        };
+                        
+                        //merge with other completions
+                        for (var z = 0; z < textCompletions.length; z++) {
+                            var item = textCompletions[z];
+                            if (otherCompletionsContains(item.value)) {
+                                continue;
+                            }
+                            otherCompletions.push(item);
+                        }
+                    });
+                }
+                catch(ex){
+                    showError(ts,editor,'ace text completor error:' + ex);
+                }
+                //console.log('textCompletions',textCompletions); console.log('otherCompletions',otherCompletions);
+                //console.timeEnd('aceTextCompletor');
+            }
+            else{
+                //add local string completions if enabled, this is far more useful than the local text completions
+                // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
+                var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
+                if (ternLocalStringMinLength > 0) {
+                    for (var i = 0; i < editor.session.getLength(); i++) {
+                        var tokens = editor.session.getTokens(i);
+                        for (var n = 0; n < tokens.length; n++) {
+                            var t = tokens[n];
+                            if (t.type === 'string') {
+                                var val = t.value.toString().substr(1, t.value.length - 2).trim(); //remove first and last quotes
+                                if (val.length >= ternLocalStringMinLength && val.indexOf(' ') === -1 && val.indexOf('\'') === -1 && val.indexOf('"') === -1) {
+                                    var isDuplicate = false;
+                                    if (otherCompletions.length > 0) {
+                                        for (var x = 0; x < otherCompletions.length; x++) {
+                                            if (otherCompletions[x].value.toString() === val) {
+                                                isDuplicate = true;
+                                                break;
+                                            }
                                         }
                                     }
-                                }
-                                if (!isDuplicate) {
-                                    otherCompletions.push({
-                                        meta: 'localString',
-                                        name: val,
-                                        value: val,
-                                        score: -1
-                                    });
+                                    if (!isDuplicate) {
+                                        otherCompletions.push({
+                                            meta: 'localString',
+                                            name: val,
+                                            value: val,
+                                            score: -1
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -1910,7 +1967,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         scope = scope.split("/").pop();
         if (scope === "html" || scope === "php") {
             if (scope === "php") scope = "html";
-            var c = editor.getCursorPosition()
+            var c = editor.getCursorPosition();
             var state = editor.session.getState(c.row);
             if (typeof state === "object") {
                 state = state[0];
