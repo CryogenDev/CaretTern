@@ -173,6 +173,10 @@ function(require, exports, module) {
                 var tok = editor.session.getTokenAt(pos.row, pos.column);
                 if (tok) {
                     if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
+                        try {
+                            e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically 
+                        }
+                        catch (ex) {}
                         e.editor.execCommand("startAutocomplete");
                     }
                 }
@@ -786,7 +790,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 var msPassed = new Date().getTime() - t;
                 //console.log('msPassed',msPassed);
-                if (msPassed < 2000) {//less than 2 seconds
+                if (msPassed < 1000) {//less than 1 second
                     return true;
                 }
             }
