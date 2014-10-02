@@ -844,7 +844,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
     
     
-            if ((forceEnableAceTextCompletor || ternCompletions.length < 5) && ts.aceTextCompletor) {
+            if ((forceEnableAceTextCompletor || ternCompletions.length === 0) && ts.aceTextCompletor) {
                 //console.time('aceTextCompletor');
                 var textCompletions = [];
                 //9.30.2014- sometimes tern just fails with complex javascript.. If this is the case, lets use the built in ace text completor to get information instead of the more advanced 'local strings' below;
