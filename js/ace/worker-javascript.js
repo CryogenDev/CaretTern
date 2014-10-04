@@ -7045,7 +7045,7 @@ ace.define('ace/mode/javascript/jshint', ['require', 'exports', 'module'], funct
                     state.ignored = newIgnoredObj;
 
                     state.option.indent = state.option.indent || 4;
-                    state.option.maxerr = state.option.maxerr || 50;
+                    state.option.maxerr = state.option.maxerr || 10000;
 
                     indent = 1;
                     global = Object.create(predefined);
