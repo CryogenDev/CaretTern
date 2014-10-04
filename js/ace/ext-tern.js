@@ -108,7 +108,7 @@ function(require, exports, module) {
                 //enable tern based on mode
                 if (editor.ternServer.enabledAtCurrentLocation(editor)) {
                     editor.completers.push(editor.ternServer);
-                    editor.ternServer.aceTextCompletor = textCompleter;//9.30.2014- give tern the text completor//console.log('textCompleter',textCompleter);
+                    editor.ternServer.aceTextCompletor = textCompleter;//9.30.2014- give tern the text completor
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
@@ -311,9 +311,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.cachedArgHints = null;
         this.activeArgHints = null;
         this.jumpStack = [];
-        //9.30.2014- set when mode changes and tern is enabled, this is the built in ace text completor
+        /**
+         * 9.30.2014- set when mode changes and tern is enabled, this is the built in ace text completor;
+         * Giving tern control of the built in text completor allows tern to fall back to it when no tern completions are found, and it allows tern to include text completions in results when user fires auto complete twice within a second;
+         */
         this.aceTextCompletor=null;
-        //9.30.2014- set every time auto complete is fired. used to include all completions if fired twice in one second
+        /**
+         * 9.30.2014- set every time auto complete is fired; 
+         * used to include all completions if fired twice in one second
+         */
         this.lastAutoCompleteFireTime=null;
     };
 
@@ -431,8 +437,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             if (found && found.changed) sendDoc(this, found);
         },
         /**
-         * Refreshes current document on tern server (forces send, useful for debugging as ideally this should not be
-         *
+         ** Refreshes current document on tern server (forces send, useful for debugging as ideally this should not be needed)
          */
         refreshDoc: function(editor) {
             var doc = findDoc(this, editor);
@@ -461,13 +466,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         updateArgHints: function(editor) {
             updateArgHints(this, editor);
         },
-
+        /**
+         * Jumps to definition of object that the cursor is currently on
+         */
         jumpToDef: function(editor) {
             jumpToDef(this, editor);
         },
-
-        jumpBack: function(cm) {
-            jumpBack(this, cm);
+        /**
+         * Jumps to previos location after using jumpToDef
+         */
+        jumpBack: function(editor) {
+            jumpBack(this, editor);
         },
         /**
          * Opens prompt to rename current variable and update references
@@ -494,7 +503,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos, forcePushChangedfile, timeout);
-            //console.log('request',request);
+            
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -565,7 +574,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         else if (ts.options.getFile) ts.options.getFile(name, cb);
         else cb(null);
     }
-
     /**
      * Finds document on the tern server
      * @param {TernServer} ts
@@ -577,9 +585,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var cur = ts.docs[n];
             if (cur.doc == doc) return cur;
         }
-        //this appears to add doc to server if not already on server...
+        //still going: no doc found, add a new one
         if (!name) for (var i = 0;; ++i) {
-            n = "[doc" + (i || "") + "]";
+            n = "[doc" + (i || "") + "]";//name not passed for new doc, so auto generate it
             if (!ts.docs[n]) {
                 name = n;
                 break;
@@ -587,7 +595,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return ts.addDoc(name, doc);
     }
-
     /**
      * Converts ace CursorPosistion {row,column} to tern posistion {line,ch}
      */
@@ -600,7 +607,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return pos;
     }
-
     /**
      * Converts tern location {line,ch} to ace posistion {row,column}
      */
@@ -613,7 +619,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return pos;
     }
-
     /**
      * Build request to tern server
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
@@ -697,7 +702,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             timeout: timeout | 1000
         };
     }
-
     /**
      * Used to get a fragment of the current document for updating the documents changes to push to the tern server (more efficient than pushing entire document on each change)
      */
@@ -735,7 +739,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             })
         };
     }
-
     /**
      * Copied from CodeMirror source, used in getFragmentAround. Not exactly sure what this does
      */
@@ -750,7 +753,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return n;
     }
-
     /**
      * Gets the text for a doc
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
@@ -760,7 +762,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (ts.options.fileFilter) val = ts.options.fileFilter(val, doc.name, doc.doc);
         return val;
     }
-
     /**
      * Gets a class name for icon based on type for completion popup
      */
@@ -773,7 +774,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         else suffix = "object";
         return cls + "completion " + cls + "completion-" + suffix;
     }
-
     //popup on select cant be bound until its created. This tracks if its bound
     var popupSelectBound = false;
     /**
@@ -789,7 +789,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     return false;
                 }
                 var msPassed = new Date().getTime() - t;
-                //console.log('msPassed',msPassed);
                 if (msPassed < 1000) {//less than 1 second
                     return true;
                 }
@@ -828,7 +827,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     type: item.type,
                     caption: item.name,
                     value: item.name,
-                    score: 100,
+                    score: 99999,
                     /*replace gets file name from path tomake it shorter while showing in popup*/
                     meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                 };
@@ -1007,10 +1006,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             catch (ex) {
                 showError(ts, editor, 'error with last autoCompleteFireTime: ' + ex);
             }
-    
         });
     }
-
     /**
      * shows type info
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
@@ -1075,7 +1072,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
     }
-
     /**
      * Finds all references to the current token
      * @param {function} [cb] - pass a callback to return find refs data result instead of showing tooltip, used internally by rename
@@ -1205,10 +1201,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         });
     }
-
     /**
      * Renames variable at current location
-     *
      */
     function rename(ts, editor) {
         /*var token = editor.getTokenAt(editor.getCursor());
@@ -1278,7 +1272,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             tip.appendChild(goBtn);
         });
     }
-
+    //holds original posistion of next change; used inside applyChanges fn
     var nextChangeOrig = 0;
     /**
      * Applys changes for a variable rename.
@@ -1333,7 +1327,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             cb(result);
         }
     }
-
     /**
      * Gets if the cursors current location is on a javascirpt call to a function (for auto showing type on cursor activity as we dont want to show type automatically for everything because its annoying)
      * @returns bool
@@ -1355,14 +1348,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         return true;
     }
-
     /**
      * Returns true if something is selected in the editor (meaning more than 1 character)
      */
     function somethingIsSelected(editor) {
         return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
     }
-
     /**
      * gets cursor posistion for opening tooltip below the cusor.
      * @returns {object} - {top:number, left:number)
@@ -1379,7 +1370,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             top: place.top + 17
         };
     }
-
     /**
      * Gets token at current cursor posistion. Returns null if none
      */
@@ -1466,7 +1456,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             "argpos": argpos
         }; //convert
     }
-
     /**
      * Gets if editor is currently in call posistion
      *  @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
@@ -1478,7 +1467,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return false;
     }
-
     /**
      * If editor is currently inside of a function call, this will try to get definition of the function that is being called, if successfull will show tooltip about arguments for the function being called.
      * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
@@ -1524,7 +1512,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             showArgHints(ts, editor, argpos);
         });
     }
-
     /**
      * Displays argument hints as tooltip
      * @param {int} pos - index of the current parameter that the cursor is located at (inside of parameters)
@@ -1551,8 +1538,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var place = getCusorPosForTooltip(editor);
         ts.activeArgHints = makeTooltip(place.left, place.top, tip, editor, true); //note: this closes on scroll and cursor activity, so the closeArgHints call at the top of this wont need to remove the tip
     }
-
-
+    /**
+     * Not exactly sure what this does
+     */
     function parseFnType(text) {
         var args = [],
             pos = 3;
@@ -1596,8 +1584,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     //#region tooltips
-
-
     /**
      * returns the difference of posistion a - posistion b (returns difference in line if any, then difference in ch if any)
      * Will return 0 if posistions are the same; (note: automatically converts to ternPosistion)
@@ -1610,11 +1596,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         b = toTernLoc(b);
         return a.line - b.line || a.ch - b.ch;
     }
-
+    /**
+     * not done
+     */
     function dialog(cm, text, f) {
         alert('need to implment dialog');
     }
-
     /**
      * Creates element
      */
@@ -1628,7 +1615,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return e;
     }
-
     /**
      * Closes any open tern tooltips
      * @param {element} [except] - pass an element that should NOT be closed to close all except this
@@ -1644,7 +1630,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         }
     }
-
     /**
      * Creates tooltip at current cusor location;
      * tooltip will auto close on cursor activity;
@@ -1728,13 +1713,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         tip.style.left = x + "px";
         tip.style.top = y + "px";
     }
-
+    /**
+     * removes node(element) from DOM
+     */
     function remove(node) {
         var p = node && node.parentNode;
         if (p) p.removeChild(node);
     }
-
-    //modified by morgan
+    /**
+     * Fades tooltip out
+     */
     function fadeOut(tooltip, int_timeout) {
         if (!int_timeout) {
             int_timeout = 1100;
@@ -1748,7 +1736,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             remove(tooltip);
         }, int_timeout);
     }
-
     /**
      * Shows error
      * @param {bool} [noPopup=false] - pass true to log error without showing popUp tooltip with error
@@ -1786,19 +1773,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             throw new Error('tern error: ' + msg);
         }, 0);*/
     }
-
+    /**
+     * Closes any active arg hints
+     */
     function closeArgHints(ts) {
         if (ts.activeArgHints) {
             remove(ts.activeArgHints);
             ts.activeArgHints = null;
         }
     }
-
     //#endregion
 
 
     //#region JumpTo
-
     /**
      * jumps to definition of a function or variable where the cursor is currently located
      */
@@ -1856,7 +1843,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         else inner();*/
         inner();
     }
-
     /**
      * Moves editor to a location (or a location in another document)
      * @param start - cursor location (can be tern or ace location as it will auto convert)
@@ -1887,7 +1873,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: toAceLoc(end)
         });
     }
-
     /**
      * Jumps back to previous posistion after using JumpTo
      */
@@ -1897,7 +1882,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!doc) return;
         moveTo(ts, findDoc(ts, editor), doc, pos.start, pos.end);
     }
-
     /**
      * Dont know what this does yet...
      * Marijnh's comment: The {line,ch} representation of positions makes this rather awkward.
@@ -1950,9 +1934,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             end: end
         };
     }
-
     /**
-     * (not exactly sure) Coverted=true
+     * (not exactly sure) Converted=true
      */
     function atInterestingExpression(editor) {
         var pos = editor.getSelectionRange().end; //editor.getCursor("end"),
@@ -1965,8 +1948,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return /\w/.test(editor.session.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
         //return /\w/.test(editor.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
     }
-
     //#endregion
+
 
     /**
      * Called by Hidedoc... Sends document to server
@@ -1983,7 +1966,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             else doc.changed = null;
         });
     }
-
     /**
      * returns true if current mode is javascript;
      *  TO- make sure tern can work in mixed html mode
@@ -1991,7 +1973,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function inJavascriptMode(editor) {
         return getCurrentMode(editor) == 'javascript';
     }
-
     /**
      * Gets editors mode at cursor posistion (including nested mode) (copied from snipped manager)     *
      */
@@ -2013,12 +1994,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return scope;
     }
-
-
+    /**
+     * Unknown.. doesnt appear to be used
+     */
     function startsWith(str, token) {
         return str.slice(0, token.length).toUpperCase() == token.toUpperCase();
     }
-
     /**
      * track changes of document
      * @param {ternServer} ts
@@ -2201,19 +2182,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 type: "debug",
                 body: message
             });
-        }
+        };
     }
     //#endregion
 
 
     //#region CSS
     var dom = require("ace/lib/dom");
-
     dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; }  .Ace-Tern-completion:before { position: absolute; left: 0px; bottom: 0px;  border-radius: 50%; font-size: 12px; font-weight: bold; height: 13px; width: 13px; font-size:11px;  /*BYM*/  line-height: 14px;  text-align: center; color: white; -moz-box-sizing: border-box; box-sizing: border-box; }  .Ace-Tern-completion-unknown:before { content: \"?\"; background: #4bb; }  .Ace-Tern-completion-object:before { content: \"O\"; background: #77c; }  .Ace-Tern-completion-fn:before { content: \"F\"; background: #7c7; }  .Ace-Tern-completion-array:before { content: \"A\"; background: #c66; }  .Ace-Tern-completion-number:before { content: \"1\"; background: #999; }  .Ace-Tern-completion-string:before { content: \"S\"; background: #999; }  .Ace-Tern-completion-bool:before { content: \"B\"; background: #999; }  .Ace-Tern-completion-guess { color: #999; }  .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 110%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0,0,0,.2); -moz-box-shadow: 2px 3px 5px rgba(0,0,0,.2); box-shadow: 2px 3px 5px rgba(0,0,0,.2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; }  .Ace-Tern-hint-doc { max-width: 25em; }  .Ace-Tern-fname { color: black; }  .Ace-Tern-farg { color: #70a; }  .Ace-Tern-farg-current {font-weight:bold; color:magenta; }  .Ace-Tern-type { color: #07c; }  .Ace-Tern-fhint-guess { opacity: .7; }");
-
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
-
     //#endregion
 
 
