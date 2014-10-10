@@ -174,7 +174,7 @@ function(require, exports, module) {
                 if (tok) {
                     if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
                         try {
-                            e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically 
+                            e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically
                         }
                         catch (ex) {}
                         e.editor.execCommand("startAutocomplete");
@@ -317,7 +317,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         this.aceTextCompletor=null;
         /**
-         * 9.30.2014- set every time auto complete is fired; 
+         * 9.30.2014- set every time auto complete is fired;
          * used to include all completions if fired twice in one second
          */
         this.lastAutoCompleteFireTime=null;
@@ -798,7 +798,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
             return false;
         };
-        var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold(); 
+        var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
         
         // console.log('getCompletions entered');
         ts.request(editor, {
@@ -1045,8 +1045,53 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 tip = elt("span", null, elt("strong", null, data.type || "not found"));
                 if (data.doc) {
-                    //show line breaks in tooltip: .split("\n").join("<br />")
-                    tip.appendChild(document.createTextNode(" — " + data.doc));
+                    //the returned data doesn't have line breaks, which is annoying, so lets add them where they should go and fix some other things
+                    var d = data.doc;
+                    
+                    //#region TESTING
+                    var highlighTags = function(str) {
+                        try{
+                            var re = /\s@\w{1,50}\s/gi;
+                            var m;
+                            //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                            while ((m = re.exec(str)) !== null) {
+                                if (m.index === re.lastIndex) {
+                                    re.lastIndex++;
+                                }
+                                str = str.replace(m[0], '<br/><span class="' + cls + 'farg">' + m[0].trim() + '</span> ');
+                            }
+                        }
+                        catch(ex){
+                            showError(ts,editor,ex);
+                        }
+                        return str;
+                    };
+                    var highlightTypes=function(str){
+                        try {
+                            var re = /\s{\w{1,50}}\s/g;
+                            var m;
+                            //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                            while ((m = re.exec(str)) !== null) {
+                                if (m.index === re.lastIndex) {
+                                    re.lastIndex++;
+                                }
+                                str = str.replace(m[0], ' <span style="font-style:italic; color:grey;">' + m[0].trim() + '</span> ');
+                            }
+                        }
+                        catch (ex) {
+                            showError(ts, editor, ex);
+                        }
+                        return str;
+                    };
+                    if(d.substr(0,1) ==='*'){
+                        d = d.substr(1);//tern leaves this for jsDoc as they start with /**, not exactly sure why...
+                    }
+                    d= " - "+ d;//separate from type that starts it
+                    d = highlighTags(d);
+                    d = highlightTypes(d);
+                    tip.appendChild(elFromString(d));
+                    //tip.appendChild(document.createTextNode(" - " + d));//QUIT WHEN DONE HERE...
+                    //#endregion
                 }
                 if (data.url) {
                     tip.appendChild(document.createTextNode(" "));
@@ -1071,6 +1116,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         };
 
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
+    }
+    /**
+     * (10.10.2014) Creates document fragment (element) from html string
+     */
+    function elFromString(s){
+        var frag = document.createDocumentFragment(),
+            temp = document.createElement('span');
+        temp.innerHTML = s;
+        while (temp.firstChild) {
+            frag.appendChild(temp.firstChild);
+        }
+        return frag;
     }
     /**
      * Finds all references to the current token
