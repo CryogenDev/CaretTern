@@ -1048,7 +1048,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //the returned data doesn't have line breaks, which is annoying, so lets add them where they should go and fix some other things
                     var d = data.doc;
                     
-                    //#region TESTING
+                    //#region Parse Comments
                     var highlighTags = function(str) {
                         try{
                             var re = /\s@\w{1,50}\s/gi;
@@ -1058,7 +1058,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                                 if (m.index === re.lastIndex) {
                                     re.lastIndex++;
                                 }
-                                str = str.replace(m[0], '<br/><span class="' + cls + 'farg">' + m[0].trim() + '</span> ');
+                                str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
                             }
                         }
                         catch(ex){
@@ -1075,7 +1075,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                                 if (m.index === re.lastIndex) {
                                     re.lastIndex++;
                                 }
-                                str = str.replace(m[0], ' <span style="font-style:italic; color:grey;">' + m[0].trim() + '</span> ');
+                                str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
                             }
                         }
                         catch (ex) {
@@ -1086,7 +1086,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     if(d.substr(0,1) ==='*'){
                         d = d.substr(1);//tern leaves this for jsDoc as they start with /**, not exactly sure why...
                     }
-                    d= " - "+ d;//separate from type that starts it
+                    d= " - "+ d+ " ";//separate from type that starts it, and add end space for regexps to work if last char is a tag
+                    //var params = parseParams(d);
                     d = highlighTags(d);
                     d = highlightTypes(d);
                     tip.appendChild(elFromString(d));
@@ -1118,16 +1119,96 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
     }
     /**
-     * (10.10.2014) Creates document fragment (element) from html string
+     * Parses jsDoc parameters from function comments
+     * @returns {array(name,type,description,optional,defaultValue)}
      */
-    function elFromString(s){
-        var frag = document.createDocumentFragment(),
-            temp = document.createElement('span');
-        temp.innerHTML = s;
-        while (temp.firstChild) {
-            frag.appendChild(temp.firstChild);
+    function parseJsDocParams(str){
+        str = str.replace(/@param/gi, '@param'); //make sure all param tags are lowercase
+        var params = [];
+        while (str.indexOf('@param') !== -1) {
+            str = str.substring(str.indexOf('@param') + 6); //starting after first param match
+            var nextTagStart = str.indexOf('@'); //split on next param (will break if @symbol inside of param, like a link... dont have to time fullproof right now)
+    
+            var paramStr = nextTagStart === -1 ? str : str.substr(0, nextTagStart);
+            var thisParam = {
+                name: "",
+                //if there is more than one param tag descibing an object with multiple properties, this will be name of parent object; http://stackoverflow.com/questions/6460604/how-to-describe-object-arguments-in-jsdoc/6460748#6460748
+                parentName:"",
+                type: "",
+                description: "",
+                optional: false,
+                defaultValue: ""
+            };
+    
+            //#region extract type type if any
+            var re = /\s?{\w{1,50}}\s/;
+            var m;
+            while ((m = re.exec(paramStr)) !== null) {
+                if (m.index === re.lastIndex) {
+                    re.lastIndex++;
+                }
+                thisParam.type = m[0];
+                paramStr = paramStr.replace(thisParam.type, '').trim(); //remove type from param string
+                thisParam.type = thisParam.type.replace('{', '').replace('}', '').replace(' ', '').trim(); //remove brackets and spaces
+            }
+            //#endregion
+    
+            //#region parseName
+            paramStr = paramStr.trim(); //we now have a single param string starting after the type, next string should be the parameter name
+            if (paramStr.substr(0, 1) === '[') {
+                thisParam.optional = true;
+                var endBracketIdx = paramStr.indexOf(']');
+                if (endBracketIdx === -1) {
+                    showError('failed to parse parameter name; Found starting \'[\' but missing closing \']\'');
+                    continue; //go to next
+                }
+                var nameStr = paramStr.substring(0, endBracketIdx + 1);
+                paramStr = paramStr.replace(nameStr, '').trim(); //remove name portion from param str
+                nameStr = nameStr.replace('[', '').replace(']', ''); //remove brackets
+                //check for default value that is specified using =
+                if (nameStr.indexOf('=') !== -1) {
+                    var defaultValue = nameStr.substr(nameStr.indexOf('=') + 1);
+                    if (defaultValue.trim() === '') {
+                        thisParam.defaultValue = "undefined";
+                    }
+                    else {
+                        thisParam.defaultValue = defaultValue.trim();
+                    }
+                    thisParam.name = nameStr.substring(0, nameStr.indexOf('=')).trim(); //set name
+                }
+                else {
+                    thisParam.name = nameStr.trim();
+                }
+            }
+            else { //not optional
+                var nextSpace = paramStr.indexOf(' ');
+                if (nextSpace !== -1) {
+                    thisParam.name = paramStr.substr(0, nextSpace);
+                    paramStr = paramStr.substr(nextSpace).trim(); //remove name portion from param str
+                }
+                else{//no more spaces left, next portion of string must be name and there is no description
+                    thisParam.name = paramStr;
+                    paramStr='';
+                }
+            }
+            var nameDotIdx = thisParam.name.indexOf('.');
+            if(nameDotIdx !==-1){
+                //NOTE: currently only supporting a single dot for parent name
+                thisParam.parentName = thisParam.name.substring(0,nameDotIdx);
+                thisParam.name = thisParam.name.substring(nameDotIdx+1);
+            }
+            //#endregion
+    
+            //#region parseDescription
+            paramStr = paramStr.trim();
+            if (paramStr.length > 0) {
+                thisParam.description = paramStr.replace('-', '').trim(); //optional hiphen specified before start of description
+            }
+            //#endregion
+    
+            params.push(thisParam);
         }
-        return frag;
+        return params;
     }
     /**
      * Finds all references to the current token
@@ -1530,7 +1611,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function updateArgHints(ts, editor) {
         closeArgHints(ts);
-        //ADD
         var callPos = getCallPos(editor);
         if (!callPos) {
             return;
@@ -1564,7 +1644,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 type: parseFnType(data.type),
                 name: data.exprName || data.name || "fn",
                 guess: data.guess,
-                doc: editor
+                doc: editor,
+                comments: data.doc //added by morgan- include comments with arg hints
             };
             showArgHints(ts, editor, argpos);
         });
@@ -1574,22 +1655,124 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {int} pos - index of the current parameter that the cursor is located at (inside of parameters)
      */
     function showArgHints(ts, editor, pos) {
+        //TODO: add a button in this tooltip that wil get full type info instead of the simplied info
         closeArgHints(ts);
         var cache = ts.cachedArgHints,
-            tp = cache.type;
+            tp = cache.type,
+            comments= cache.comments;//added by morgan to include document comments
+            
+        //parse comments to use for type!
+        if(!cache.hasOwnProperty('params')){
+            if(!cache.comments){
+                cache.params=null;
+            }
+            else{
+                var params = parseJsDocParams(cache.comments);
+                if(!params || params.length ===0){
+                    cache.params=null;
+                }
+                else{
+                    cache.params=params;
+                }
+            }
+        }
+        /** 
+         * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
+         * @param {object} arg - name and type
+         * @param {bool} getChildren - if true, will return array of child params
+         */
+        var getParam=function(arg, getChildren){
+            if(cache.params===null)return null;
+            if(!arg.name)return null;
+            var children=[];
+            for (var i = 0; i < cache.params.length; i++) {
+                if(getChildren===true){
+                    if (cache.params[i].parentName.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
+                        children.push(cache.params[i]);
+                    }
+                }
+                else{
+                    if (cache.params[i].name.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
+                        return cache.params[i];
+                    }
+                }
+            }
+            if(getChildren===true) return children;
+            return null;
+        };
+        /**
+         * gets name string for param that includes default value and optional
+         */
+        var getParamDetailedName= function(param){
+            var name = param.name;
+            if(param.optional===true){
+                if (param.defaultValue) {
+                    name = "[" + name + "=" + param.defaultValue + "]";
+                }
+                else {
+                    name = "[" + name + "]";
+                }
+            }
+            return name;
+        };
+            
         var tip = elt("span", cache.guess ? cls + "fhint-guess" : null,
         elt("span", cls + "fname", cache.name), "(");
+        
+         var activeParam=null,
+        activeParamChildren=[];//one ore more child params for multiple object properties
         for (var i = 0; i < tp.args.length; ++i) {
+            var isCurrent = i == pos;
             if (i) tip.appendChild(document.createTextNode(", "));
-            var arg = tp.args[i];
-            tip.appendChild(elt("span", cls + "farg" + (i == pos ? " " + cls + "farg-current" : ""), arg.name || "?"));
-            if (arg.type != "?") {
+            var arg = tp.args[i]; //name,type
+        
+            //added by morgan: use param comments if available
+            var param = getParam(arg, false);
+            var children = getParam(arg, true);;
+            var name = arg.name || "?";
+            var type = arg.type;
+            if (param !== null) {
+                name = getParamDetailedName(param);
+                if (param.type) {
+                    type = param.type;
+                }
+                if (isCurrent) {
+                    activeParam = param;
+                }
+            }
+            if (children.length > 0) {
+                if (isCurrent) {
+                    activeParamChildren = children;
+                }
+                type = "{";
+                for (var i = 0; i < children.length; i++) {
+                    type += children[i].name;
+                    if (i + 1 !== children.length && children.length > 1) type += ", ";
+                }
+                type += "}";
+            }
+        
+            tip.appendChild(elt("span", cls + "farg" + (isCurrent ? " " + cls + "farg-current" : ""), name || "?"));
+            if (type != "?") {
                 tip.appendChild(document.createTextNode(":\u00a0"));
-                tip.appendChild(elt("span", cls + "type", arg.type));
+                tip.appendChild(elt("span", cls + "type", type));
             }
         }
         tip.appendChild(document.createTextNode(tp.rettype ? ") ->\u00a0" : ")"));
-        if (tp.rettype) tip.appendChild(elt("span", cls + "type", tp.rettype));
+        if (tp.rettype) tip.appendChild(elt("span", cls + "type", tp.rettype));//TODO: add return type from comments
+        
+        //add active param details
+        if(activeParam && activeParam.description){
+            tip.appendChild(elFromString('<div class="'+cls+'farg-current-description"><span class="'+cls+'farg-current-name">'+activeParam.name+': </span>'+activeParam.description+'</div>'));
+        }
+        //add active param children details
+        if(activeParamChildren && activeParamChildren.length>0){
+            
+            for (var i = 0; i < activeParamChildren.length; i++) {
+                var t = activeParamChildren[i].type? '<span class="' + cls + 'type">{' + activeParamChildren[i].type+ '} </span>' : '';
+                tip.appendChild(elFromString('<div class="'+cls+'farg-current-description">'+t+'<span class="'+cls+'farg-current-name">'+getParamDetailedName(activeParamChildren[i])+': </span>'+activeParamChildren[i].description+'</div>'));
+            }
+        }
 
         //get cursor location- there is likely a better way to do this...
         var place = getCusorPosForTooltip(editor);
@@ -1658,6 +1841,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function dialog(cm, text, f) {
         alert('need to implment dialog');
+    }
+    /**
+     * (10.10.2014) Creates document fragment (element) from html string
+     */
+    function elFromString(s){
+        var frag = document.createDocumentFragment(),
+            temp = document.createElement('span');
+        temp.innerHTML = s;
+        while (temp.firstChild) {
+            frag.appendChild(temp.firstChild);
+        }
+        return frag;
     }
     /**
      * Creates element
@@ -2246,9 +2441,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; }  .Ace-Tern-completion:before { position: absolute; left: 0px; bottom: 0px;  border-radius: 50%; font-size: 12px; font-weight: bold; height: 13px; width: 13px; font-size:11px;  /*BYM*/  line-height: 14px;  text-align: center; color: white; -moz-box-sizing: border-box; box-sizing: border-box; }  .Ace-Tern-completion-unknown:before { content: \"?\"; background: #4bb; }  .Ace-Tern-completion-object:before { content: \"O\"; background: #77c; }  .Ace-Tern-completion-fn:before { content: \"F\"; background: #7c7; }  .Ace-Tern-completion-array:before { content: \"A\"; background: #c66; }  .Ace-Tern-completion-number:before { content: \"1\"; background: #999; }  .Ace-Tern-completion-string:before { content: \"S\"; background: #999; }  .Ace-Tern-completion-bool:before { content: \"B\"; background: #999; }  .Ace-Tern-completion-guess { color: #999; }  .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 110%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0,0,0,.2); -moz-box-shadow: 2px 3px 5px rgba(0,0,0,.2); box-shadow: 2px 3px 5px rgba(0,0,0,.2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; }  .Ace-Tern-hint-doc { max-width: 25em; }  .Ace-Tern-fname { color: black; }  .Ace-Tern-farg { color: #70a; }  .Ace-Tern-farg-current {font-weight:bold; color:magenta; }  .Ace-Tern-type { color: #07c; }  .Ace-Tern-fhint-guess { opacity: .7; }");
+    dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; font-size:larger; } .Ace-Tern-type { color: #07c;} .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag{ color: #70a; text-transform: lowercase; } .Ace-Tern-farg-current-name{font-weight:bold;} .Ace-Tern-farg-current-description{font-style:italic; margin-top:2px; color:grey;}");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
+    //FOR CARET ONLY-- override css above as carets default font size is stupid small
+    dom.importCssString(".Ace-Tern-tooltip {font-size:110%;}");
     //#endregion
 
 
