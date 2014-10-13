@@ -1,7 +1,7 @@
 {
     "name": "Caret-T",
     "description": "Professional text editing for Chrome and Chrome OS",
-    "version": "1.6.700",
+    "version": "1.6.710",
     "manifest_version": 2,
     "icons": {
         "128": "icon-128-inverted.png"

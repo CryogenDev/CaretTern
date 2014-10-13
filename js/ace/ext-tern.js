@@ -1243,13 +1243,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var tip = makeTooltip(null, null, header, editor, false, - 1);
             //data.name + '(' + data.type + ') References \n-----------------------------------------'
 
-            //add close button
+           /*//add close button 10.13.2014- close button is built in
             var closeBtn = elt('span', '', 'close');
             closeBtn.setAttribute('style', 'cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
             closeBtn.addEventListener('click', function() {
                 remove(tip);
             });
-            header.appendChild(closeBtn);
+            header.appendChild(closeBtn);*/
 
             //add divider
             //tip.appendChild(elt('div','','-----------------------------------------------'));
@@ -1676,7 +1676,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
         }
-        /** 
+        /**
          * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
          * @param {object} arg - name and type
          * @param {bool} getChildren - if true, will return array of child params
@@ -1913,6 +1913,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
+        
+        //add close button
+        var closeBtn = document.createElement('a');
+        closeBtn.setAttribute('title', 'close');
+        closeBtn.setAttribute('class', cls + 'tooltip-boxclose');
+        closeBtn.addEventListener('click', function() {
+            remove(node);
+        });
+        node.appendChild(closeBtn);
 
         if (closeOnCusorActivity === true) {
             if (!editor) {
@@ -2441,7 +2450,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; font-size:larger; } .Ace-Tern-type { color: #07c;} .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag{ color: #70a; text-transform: lowercase; } .Ace-Tern-farg-current-name{font-weight:bold;} .Ace-Tern-farg-current-description{font-style:italic; margin-top:2px; color:grey;}");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; color:magenta; } .Ace-Tern-type { color: #07c; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; }");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
     //FOR CARET ONLY-- override css above as carets default font size is stupid small
