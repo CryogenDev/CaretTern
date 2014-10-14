@@ -1728,7 +1728,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         
             //added by morgan: use param comments if available
             var param = getParam(arg, false);
-            var children = getParam(arg, true);;
+            var children = getParam(arg, true);
             var name = arg.name || "?";
             var type = arg.type;
             if (param !== null) {
@@ -1740,7 +1740,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     activeParam = param;
                 }
             }
-            if (children.length > 0) {
+            if (children && children.length > 0) {
                 if (isCurrent) {
                     activeParamChildren = children;
                 }
@@ -2149,25 +2149,30 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {object} data - contains documentation for function, start (ch,line), end(ch,line), file, context, contextOffset, origin
      */
     function findContext(editor, data) {
-        var before = data.context.slice(0, data.contextOffset).split("\n");
-        var startLine = data.start.line - (before.length - 1);
-        var ch = null;
-        if (before.length == 1) {
-            ch = data.start.ch;
+        try{
+            var before = data.context.slice(0, data.contextOffset).split("\n");
+            var startLine = data.start.line - (before.length - 1);
+            var ch = null;
+            if (before.length == 1) {
+                ch = data.start.ch;
+            }
+            else {
+                ch = editor.session.getLine(startLine).length - before[0].length;
+            }
+            var start = Pos(startLine, ch);
+        
+            var text = editor.session.getLine(startLine).slice(start.ch);
+            for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur) {
+                text += "\n" + editor.session.getLine(cur);
+            }
+            // if (text.slice(0, data.context.length) == data.context)
+            // NOTE: this part is commented out and always returns data
+            // because there is a bug that is causing it to miss by one char
+            // and I dont know when the part below would ever be needed (I guess we will find out when it doesnt work)
         }
-        else {
-            ch = editor.session.getLine(startLine).length - before[0].length;
+        catch(ex){
+            console.log('ext-tern.js findContext Error; (error is caused by a doc (string) being passed to this function instead of editor due to ghetto hack from adding VS refs... need to fix eventually. should only occur when jumping to def in separate file)',ex);//,'\neditor:',editor,'\ndata:',data);
         }
-        var start = Pos(startLine, ch);
-
-        var text = editor.session.getLine(startLine).slice(start.ch);
-        for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur) {
-            text += "\n" + editor.session.getLine(cur);
-        }
-        // if (text.slice(0, data.context.length) == data.context)
-        // NOTE: this part is commented out and always returns data
-        // because there is a bug that is causing it to miss by one char
-        // and I dont know when the part below would ever be needed (I guess we will find out when it doesnt work)
         return data;
 
         //COMEBACK--- need to use editor.find.... NOT IN USE RIGHT NOW... need to fix!
@@ -2450,7 +2455,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; color:magenta; } .Ace-Tern-type { color: #07c; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; }");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; font-size:larger; } .Ace-Tern-type { color: #07c; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; }");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
     //FOR CARET ONLY-- override css above as carets default font size is stupid small
