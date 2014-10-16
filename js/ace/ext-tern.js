@@ -1299,11 +1299,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     targetDoc = doc; //current doc
                     updatePosDelay = 50;
                 }
+                var animatedScroll =editor.getAnimatedScroll();
+                if(animatedScroll){
+                    //disable this as there is no way to know for sure when the thing is done scrolling
+                    editor.setAnimatedScroll(false);
+                }
                 moveTo(ts, doc, targetDoc, start, null, true);
                 //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
                 setTimeout(function() {
                     moveTooltip(tip, null, null, editor);
                     closeAllTips(tip); //close any tips that moving this might open, except for the ref tip
+                    if(animatedScroll){
+                        editor.setAnimatedScroll(true);//re-enable
+                    }
                 }, updatePosDelay);
             });
 

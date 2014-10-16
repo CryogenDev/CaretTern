@@ -13,10 +13,10 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
             var url = themes[theme] || themes.dark;
             document.find("#theme").setAttribute("href", url);
         });
-    }
+    };
     setTheme();
 
-    document.find(".app-name").textContent = chrome.runtime.getManifest().version;
+    document.find(".app-name").textContent ='Caret-T '+ chrome.runtime.getManifest().version;
 
     //these are modules that must be loaded before init:complete
     var loadedModules = {

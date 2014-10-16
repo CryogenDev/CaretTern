@@ -41,6 +41,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         editor.setShowInvisibles(userConfig.showWhitespace || false);
         editor.setHighlightActiveLine(userConfig.highlightLine || false);
         editor.container.style.fontFamily = userConfig.fontFamily || null;
+        editor.setAnimatedScroll(userConfig.animatedScroll || true);
         defaultFontSize();
         //load tern
         ace.config.loadModule('ace/ext/language_tools', function() {
