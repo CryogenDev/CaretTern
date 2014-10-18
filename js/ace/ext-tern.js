@@ -987,15 +987,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 closeAllTips(); //remove(tooltip); //using close all , but its slower, comeback and remove single if its working right
                 //gets data of currently selected completion
                 var data = editor.completer.popup.getData(editor.completer.popup.getRow());
-                //  logO(data, 'data');
                 if (!data || !data.doc) { //no comments
                     return;
                 }
                 //make tooltip
-                //return;
                 var node = editor.completer.popup.renderer.getContainerElement();
-                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset,
-                node.getBoundingClientRect().top + window.pageYOffset, data.doc);
+                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data), editor);
                 tooltip.className += " " + cls + "hint-doc";
             }
     
@@ -1041,71 +1038,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type == "fn()") {
                         return;
                     }
-                    //logO(data, 'data');
                 }
-                tip = elt("span", null, elt("strong", null, data.type || "not found"));
-                if (data.doc) {
-                    //the returned data doesn't have line breaks, which is annoying, so lets add them where they should go and fix some other things
-                    var d = data.doc;
-                    
-                    //#region Parse Comments
-                    var highlighTags = function(str) {
-                        try{
-                            var re = /\s@\w{1,50}\s/gi;
-                            var m;
-                            //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
-                            while ((m = re.exec(str)) !== null) {
-                                if (m.index === re.lastIndex) {
-                                    re.lastIndex++;
-                                }
-                                str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
-                            }
-                        }
-                        catch(ex){
-                            showError(ts,editor,ex);
-                        }
-                        return str;
-                    };
-                    var highlightTypes=function(str){
-                        try {
-                            var re = /\s{\w{1,50}}\s/g;
-                            var m;
-                            //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
-                            while ((m = re.exec(str)) !== null) {
-                                if (m.index === re.lastIndex) {
-                                    re.lastIndex++;
-                                }
-                                str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
-                            }
-                        }
-                        catch (ex) {
-                            showError(ts, editor, ex);
-                        }
-                        return str;
-                    };
-                    if(d.substr(0,1) ==='*'){
-                        d = d.substr(1);//tern leaves this for jsDoc as they start with /**, not exactly sure why...
-                    }
-                    d= " - "+ d+ " ";//separate from type that starts it, and add end space for regexps to work if last char is a tag
-                    //var params = parseParams(d);
-                    d = highlighTags(d);
-                    d = highlightTypes(d);
-                    tip.appendChild(elFromString(d));
-                    //tip.appendChild(document.createTextNode(" - " + d));//QUIT WHEN DONE HERE...
-                    //#endregion
-                }
-                if (data.url) {
-                    tip.appendChild(document.createTextNode(" "));
-                    //added by morgan: make link open in new window
-                    var link = elt("a", null, "[docs]");
-                    link.target = "_blank";
-                    link.href = data.url;
-                    tip.appendChild(link);
-                }
-                //added by morgan
-                if (data.origin) {
-                    tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
-                }
+                tip = createInfoDataTip(data,true);
             }
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
             setTimeout(function() {
@@ -1117,6 +1051,81 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         };
 
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
+    }
+    /**
+     * @returns {element} for tooltip from data
+     * @param {object} data - info about an object from tern
+     * @param {string} [data.doc] - comments (or documentation) 
+     * @param {string} [data.url] - url to info about object for creating link
+     * @param {string} [data.origin] - source name of the object
+     * @param {bool} [includeType=false] - pass true to include object type (which is small bold part at top of tip)
+     */
+    function createInfoDataTip(data, inclueType){
+        //TODO: add links in tooltip: jumpto, find refs
+        tip = elt("span", null, elt("strong", null, inclueType? data.type || "not found": ""));
+        if (data.doc) {
+            var d = data.doc;
+    
+            //#region Parse Comments
+            var highlighTags = function(str) {
+                try {
+                    var re = /\s@\w{1,50}\s/gi;
+                    var m;
+                    //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                    while ((m = re.exec(str)) !== null) {
+                        if (m.index === re.lastIndex) {
+                            re.lastIndex++;
+                        }
+                        str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
+                    }
+                }
+                catch (ex) {
+                    showError(ts, editor, ex);
+                }
+                return str;
+            };
+            var highlightTypes = function(str) {
+                try {
+                    var re = /\s{[^}]{1,50}}\s/g;
+                    var m;
+                    //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                    while ((m = re.exec(str)) !== null) {
+                        if (m.index === re.lastIndex) {
+                            re.lastIndex++;
+                        }
+                        str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
+                    }
+                }
+                catch (ex) {
+                    showError(ts, editor, ex);
+                }
+                return str;
+            };
+            if (d.substr(0, 1) === '*') {
+                d = d.substr(1); //tern leaves this for jsDoc as they start with /**, not exactly sure why...
+            }
+            if(inclueType){
+                d = " - " + d + " "; //separate from type that starts it, and add end space for regexps to work if last char is a tag
+            }
+            else{
+                d = d.trim();
+            }
+            d = highlighTags(d);
+            d = highlightTypes(d);
+            tip.appendChild(elFromString(d));
+            //#endregion
+        }
+        if (data.url) {
+            tip.appendChild(document.createTextNode(" "));
+            var link = elt("a", null, "[docs]");
+            link.target = "_blank";
+            link.href = data.url;
+            tip.appendChild(link);
+        }
+        if (data.origin) {
+            tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
+        }
+        return tip;
     }
     /**
      * Parses jsDoc parameters from function comments
@@ -1141,7 +1150,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             };
     
             //#region extract type type if any
-            var re = /\s?{\w{1,50}}\s/;
+            var re = /\s{[^}]{1,50}}\s/;
             var m;
             while ((m = re.exec(paramStr)) !== null) {
                 if (m.index === re.lastIndex) {
