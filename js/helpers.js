@@ -1,5 +1,5 @@
 /*
- * helpers.js version 1.0 - Morgan Yarbrough
+ * helpers.js version 1.2 - Morgan Yarbrough
  */
 
 /**
@@ -37,7 +37,7 @@ function DBG(a, logParams, NoTrace) {
                 r += "Fn Name: " + a.callee.name;
             }
             else {
-                r += "Fn Name: undefined" ;
+                r += "Fn Name: undefined";
             }
             if (a.callee.caller) {
                 r += brk;
@@ -99,7 +99,7 @@ function DBG(a, logParams, NoTrace) {
                 r += "\n Ran into error trying to print stack: " + ex;
             }
         }
-        console.log(r+"\n\n");
+        console.log(r + "\n\n");
     }
     catch (ex) {
         console.log('DBG called and ran into error:', ex);
@@ -154,21 +154,35 @@ function logO(object, str_Description, NoTrace) {
 }
 
 /**
- * Logs passed arugments (pass as many as desired) intelligently including the type of object and a mini stack trace
+ * Logs passed arugments (pass as many as desired) intelligently including the type of object and a mini stack trace;
+ * Automatically logs stack of error (but doesnt throw error);
+ * Automatically groups multiple args in log for chrome;
+ *
  * @param {object} [options] - (must be first argument)
  * @param {bool} [options.stack=true] - determines if stack trace is logged
  * @param {bool} [options.time=true] - determines if time logged
  * @param {bool} [options.vars=true] - determines if object should be set to global variable names
+ *
+ * @Example for logging error with description (assume ex is an error): log('some info about error', ex);
  */
 function log() {
+    if (!window.hasOwnProperty('advancedConsole')) {
+        //https://developer.chrome.com/devtools/docs/console. Oher browsers support but I only care about chrome and dont want to do further checking.
+        window.advancedConsole = new RegExp('chrome', 'i').test(navigator.userAgent);
+    }
     //check if options passed as first arg
-    var options = { 'stack': true, 'time': true, 'vars': true };
+    var options = {
+        'stack': true,
+        'time': true,
+        'vars': true
+    };
     var firstLog = 0;
+    var noStack = false;
     var firstArg = arguments[0];
-    if(arguments.length>1){
+    if (arguments.length > 1) {
         if (firstArg && (firstArg.hasOwnProperty('stack') || firstArg.hasOwnProperty('time') || firstArg.hasOwnProperty('vars'))) {
-            try{
-                if (firstArg.constructor.name !== 'Error') {
+            try {
+                if (firstArg.constructor.name.indexOf('Error') !== -1) {
                     firstLog = 1;
                     if (firstArg.hasOwnProperty('stack')) {
                         options['stack'] = firstArg['stack'];
@@ -179,14 +193,21 @@ function log() {
                     if (firstArg.hasOwnProperty('vars')) {
                         options['vars'] = firstArg['vars'];
                     }
-            
+
                 }
             }
-            catch(ex){}
+            catch (ex) {}
         }
     }
     if (window.logOtempCount === undefined) {
         window.logOtempCount = 0;
+    }
+    if (advancedConsole && arguments.length > 1) {
+        if (!window.hasOwnProperty('logOGroup')) {
+            window.logOGroup = 0;
+        }
+        window.logOGroup++;
+        console.group('log# ' + logOGroup);
     }
     //get Stack
     var stack = '';
@@ -200,17 +221,23 @@ function log() {
                 if (!t) {
                     continue;
                 }
-                if (t.toLowerCase().indexOf("at log") !== -1) {//dont log this
+                if (t.toLowerCase().indexOf("at log") !== -1) { //dont log this
                     continue;
                 }
                 validTraces.push(t);
                 validTraceCount++;
-                if (validTraceCount > 1) { break; }
+                if (validTraceCount > 1) {
+                    break;
+                }
             }
             stack = validTraces.join('\n').replace(/\s+/g, " ").trim();
             stack += '\n';
         }
-        catch (ex) { setTimeout(function () { throw (ex); }, 0); }
+        catch (ex) {
+            setTimeout(function() {
+                throw (ex);
+            }, 0);
+        }
     }
     //do loop
     for (var i = firstLog; i < arguments.length; i++) {
@@ -218,6 +245,7 @@ function log() {
         var logObject = false;
         var a = arguments[i];
         var type = '';
+        var css = '';
         try {
             if (a === undefined) {
                 type = " (undefined) ";
@@ -234,13 +262,19 @@ function log() {
                     msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
                     logObject = true;
                 }
-                else if (type === 'Error') {
-                    msg += 'Type: ' + type ;
-                    try{
-                        msg +='\n stack: \t ' + a.stack.toString();//note that stack contains the message
+                else if (type.indexOf('Error') !== -1 && a.hasOwnProperty('stack')) {
+                    //catches all error types: TypeError|EvalError|InternalError|RangeError|SyntaxError|URIError
+                    msg += 'Type:  ' + type;
+                    try {
+                        msg += '\nStack: ' + a.stack.toString(); //note that stack contains the message
+                        noStack = true;
+                        if (advancedConsole) {
+                            css = 'color:red;';
+                        }
                     }
-                    catch(ex){
-                        logObject=true;//failed to get stack
+                    catch (ex) {
+                        logObject = true; //failed to get stack
+                        css = '';
                     }
                 }
                 else { //any other type is a class
@@ -249,7 +283,7 @@ function log() {
                 }
             }
         }
-        catch (ex) {//will throw error if undefined or null
+        catch (ex) { //will throw error if undefined or null
             type = 'a.constructor.name failed: ' + ex.message;
             if (a === undefined) {
                 msg += 'Type: ' + type + '\n' + 'value: ' + 'undefined';
@@ -260,7 +294,9 @@ function log() {
             else {
                 msg += 'Type: ' + type + '\n' + 'value: ' + '(Next Logged Object)';
                 logObject = true;
-                setTimeout(function () { throw (ex); }, 0);//not sure why this error occurred
+                setTimeout(function() {
+                    throw (ex);
+                }, 0); //not sure why this error occurred
             }
         }
         //now do the logging
@@ -270,26 +306,42 @@ function log() {
             var globalVarName = '';
             if (options.vars) {
                 logOtempCount++;
-                if (logOtempCount > 99) { logOtempCount = 1; }//max of 99 temp vars
+                if (logOtempCount > 99) {
+                    logOtempCount = 1;
+                } //max of 99 temp vars
                 globalVarName = 'tmp' + logOtempCount;
                 window[globalVarName] = a;
-                globalVarName= '\t window.' + globalVarName + '=\n';//for string below
+                globalVarName = '\t window.' + globalVarName + '=\n'; //for string below
             }
             if (i === firstLog) {
                 console.log('\n' + time + stack, msg + globalVarName, a);
             }
             else {
-                console.log(msg +globalVarName, a);
+                console.log(msg + globalVarName, a);
             }
         }
         else {
             if (i === firstLog) {
-                console.log('\n'+time + stack, msg);
+                if (css) {
+                    console.log('\n' + time + noStack ? '' : stack);
+                    console.log('%c' + msg, css);
+                }
+                else {
+                    console.log('\n' + time + noStack ? '' : stack, msg);
+                }
             }
             else {
-                console.log(msg);
+                if (css) {
+                    console.log('%c' + msg, css);
+                }
+                else {
+                    console.log(msg);
+                }
             }
         }
+    }
+    if (advancedConsole && arguments.length > 1) {
+        console.groupEnd('log# ' + logOGroup);
     }
 }
 
@@ -298,7 +350,7 @@ function log() {
  */
 function getTime() {
     var D = new Date();
-    return ((D.getHours() < 10) ? "0" : "") + D.getHours() + ":" + ((D.getMinutes() < 10) ? "0" : "") + D.getMinutes() + ":" + ((D.getSeconds() < 10) ? "0" : "") + D.getSeconds() +":" + (D.getMilliseconds() < 10 ? "0" : "") + D.getMilliseconds();
+    return ((D.getHours() < 10) ? "0" : "") + D.getHours() + ":" + ((D.getMinutes() < 10) ? "0" : "") + D.getMinutes() + ":" + ((D.getSeconds() < 10) ? "0" : "") + D.getSeconds() + ":" + (D.getMilliseconds() < 10 ? "0" : "") + D.getMilliseconds();
 }
 
 /**
@@ -322,5 +374,5 @@ function logSW(date_SW, str_Msg, bool_UseMS) {
         }
         log(s + str_Msg);
     }
-    catch (ex) { log('LogSW error:',ex); }
+    catch (ex) { log('LogSW error:', ex); }
 }

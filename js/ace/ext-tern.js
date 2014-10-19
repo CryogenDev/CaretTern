@@ -94,7 +94,7 @@ function(require, exports, module) {
     var Autocomplete = require("../autocomplete").Autocomplete;
     Autocomplete.startCommand = {
         name: "startAutocomplete",
-        exec: function(editor,e) {
+        exec: function(editor, e) {
             if (!editor.completer) {
                 editor.completer = new Autocomplete();
             }
@@ -108,7 +108,7 @@ function(require, exports, module) {
                 //enable tern based on mode
                 if (editor.ternServer.enabledAtCurrentLocation(editor)) {
                     editor.completers.push(editor.ternServer);
-                    editor.ternServer.aceTextCompletor = textCompleter;//9.30.2014- give tern the text completor
+                    editor.ternServer.aceTextCompletor = textCompleter; //9.30.2014- give tern the text completor
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
@@ -136,7 +136,7 @@ function(require, exports, module) {
     //#region Tern
     var TernServer = require("../tern").TernServer;
     var aceTs = new TernServer({
-        defs: ['jquery','browser', 'ecma5'],
+        defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
             doc_comment: true,
             /*requirejs: {
@@ -265,7 +265,7 @@ function(require, exports, module) {
  *  tern server plugin for ace
  */
 ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function(require, exports, module) {
-    
+
     //#region TernServerPublic
 
     /**
@@ -315,12 +315,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * 9.30.2014- set when mode changes and tern is enabled, this is the built in ace text completor;
          * Giving tern control of the built in text completor allows tern to fall back to it when no tern completions are found, and it allows tern to include text completions in results when user fires auto complete twice within a second;
          */
-        this.aceTextCompletor=null;
+        this.aceTextCompletor = null;
         /**
          * 9.30.2014- set every time auto complete is fired;
          * used to include all completions if fired twice in one second
          */
-        this.lastAutoCompleteFireTime=null;
+        this.lastAutoCompleteFireTime = null;
     };
 
     //#region helpers
@@ -441,11 +441,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         refreshDoc: function(editor) {
             var doc = findDoc(this, editor);
-            sendDoc(this,doc);
+            sendDoc(this, doc);
             var el = document.createElement('span');
-            el.setAttribute('style','color:green;');
-            el.innerHTML="Tern document refreshed";
-            tempTooltip(editor,el,1000);
+            el.setAttribute('style', 'color:green;');
+            el.innerHTML = "Tern document refreshed";
+            tempTooltip(editor, el, 1000);
         },
         /**
          * Gets completions to display in editor when Ctrl+Space is pressed; This is called by
@@ -503,7 +503,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos, forcePushChangedfile, timeout);
-            
+
             this.server.request(request, function(error, data) {
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
                 c(error, data);
@@ -587,7 +587,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         //still going: no doc found, add a new one
         if (!name) for (var i = 0;; ++i) {
-            n = "[doc" + (i || "") + "]";//name not passed for new doc, so auto generate it
+            n = "[doc" + (i || "") + "]"; //name not passed for new doc, so auto generate it
             if (!ts.docs[n]) {
                 name = n;
                 break;
@@ -789,7 +789,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     return false;
                 }
                 var msPassed = new Date().getTime() - t;
-                if (msPassed < 1000) {//less than 1 second
+                if (msPassed < 1000) { //less than 1 second
                     return true;
                 }
             }
@@ -800,7 +800,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         };
         var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
         
-        // console.log('getCompletions entered');
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -813,7 +812,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             guess: true,
             expandWordForward: true
         },
-    
+
         function(error, data) {
             if (error) {
                 return showError(ts, editor, error);
@@ -832,8 +831,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                 };
             });
-    
-    
+
+
             //#region OtherCompletions
             var otherCompletions = [];
             //if basic auto completion is on, then get keyword completions that are not found in tern results
@@ -845,8 +844,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-    
-    
+
+
             if ((forceEnableAceTextCompletor || ternCompletions.length === 0) && ts.aceTextCompletor) {
                 //console.time('aceTextCompletor');
                 var textCompletions = [];
@@ -881,7 +880,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             }
                             return isDupe;
                         };
-    
+
                         //merge with other completions
                         for (var z = 0; z < textCompletions.length; z++) {
                             var item = textCompletions[z];
@@ -933,7 +932,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
             }
-    
+
             //now merge other completions with tern (tern has priority)
             //tested on 5,000 line doc with all other completions and takes about ~10ms
             if (otherCompletions.length > 0) {
@@ -954,18 +953,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 ternCompletions = mergedCompletions.slice();
             }
             //#endregion
-    
-    
+
+
             //callback goes to the lang tools completor
             callback(null, ternCompletions);
-    
+
             var tooltip = null;
             //COMEBACK: also need to bind popup close and update (update likely means when the tooltip has to move) (and hoever over items should move tooltip)
-    
+
             if (!bindPopupSelect()) {
                 popupSelectionChanged(); //call once if popupselect bound exited to show tooltip for first item
             }
-    
+
             //binds popup selection change, which cant be done until first time popup is created
             function bindPopupSelect() {
                 if (popupSelectBound) {
@@ -992,10 +991,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 //make tooltip
                 var node = editor.completer.popup.renderer.getContainerElement();
-                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data), editor);
+                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data,true), editor);
                 tooltip.className += " " + cls + "hint-doc";
             }
-    
+
             //9.30.2014- track last time auto complete was fired
             try {
                 ts.lastAutoCompleteFireTime = new Date().getTime();
@@ -1039,7 +1038,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         return;
                     }
                 }
-                tip = createInfoDataTip(data,true);
+                tip = createInfoDataTip(data, true);
             }
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
             setTimeout(function() {
@@ -1055,75 +1054,277 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * @returns {element} for tooltip from data
      * @param {object} data - info about an object from tern
+     * @param {string} [data.name] - name of object
      * @param {string} [data.doc] - comments (or documentation) 
      * @param {string} [data.url] - url to info about object for creating link
      * @param {string} [data.origin] - source name of the object
-     * @param {bool} [includeType=false] - pass true to include object type (which is small bold part at top of tip)
+     * @param {object[]} [data.params] - result of parseJsDocParams(data.doc) to prevent re-parsing
+     * @param {object [data.fnArgs] - result of parseFnType(data.type) to prevent re-parsing
+     * @param {bool} [includeType=false] - pass true to include object type (which is small bold part at top of tip), will only be included if jsDoc params could not be parsed
+     * @param {int} [activeArg] pass posistion of active argument if in arg hints (fist arg is 0)
      */
-    function createInfoDataTip(data, inclueType){
+    function createInfoDataTip(data, includeType, activeArg){
+        //log('data', data, 'includeType', includeType, 'parseFnType(data.type)', parseFnType(data.type));
         //TODO: add links in tooltip: jumpto, find refs
-        tip = elt("span", null, elt("strong", null, inclueType? data.type || "not found": ""));
-        if (data.doc) {
-            var d = data.doc;
+        tip = elt("span", null);
     
-            //#region Parse Comments
-            var highlighTags = function(str) {
-                try {
-                    var re = /\s@\w{1,50}\s/gi;
-                    var m;
-                    //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
-                    while ((m = re.exec(str)) !== null) {
-                        if (m.index === re.lastIndex) {
-                            re.lastIndex++;
+        var d = data.doc;
+        var params =data.params ||  parseJsDocParams(d); //parse params
+    
+        if (includeType) {
+            var fnArgs = data.fnArgs ? data.fnArgs : data.type ? parseFnType(data.type) : null; //will be null if parseFnType detects that this is not a function 
+           if (fnArgs) {
+                /**
+                 * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
+                 * @param {object} arg - name and type
+                 * @param {bool} getChildren - if true, will return array of child params
+                 */
+                var getParam = function(arg, getChildren) {
+                    if (params === null) return null;
+                    if (!arg.name) return null;
+                    var children = [];
+                    for (var i = 0; i < params.length; i++) {
+                        if (getChildren === true) {
+                            if (params[i].parentName.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
+                                children.push(params[i]);
+                            }
                         }
-                        str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
+                        else {
+                            if (params[i].name.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
+                                return params[i];
+                            }
+                        }
+                    }
+                    if (getChildren === true) return children;
+                    return null;
+                };
+                /**
+                 * gets name string for param that includes default value and optional
+                 */
+                var getParamDetailedName = function(param) {
+                    var name = param.name;
+                    if (param.optional === true) {
+                        if (param.defaultValue) {
+                            name = "[" + name + "=" + param.defaultValue + "]";
+                        }
+                        else {
+                            name = "[" + name + "]";
+                        }
+                    }
+                    return name;
+                };
+                //use detailed argHints if called from argHints (activeArg is number) OR there are no params passed from js doc (which means we will let tern interpret param details)
+                var useDetailedArgHints = params.length === 0 || !isNaN(parseInt(activeArg));
+                var typeStr = '';
+                typeStr += data.exprName || data.name || "fn";
+                typeStr += "(";
+                var activeParam = null,
+                    activeParamChildren = []; //one ore more child params for multiple object properties
+                    
+                
+                for (var i = 0; i < fnArgs.args.length; i++) {
+                    var paramStr = '';
+                    var isCurrent = !isNaN(parseInt(activeArg)) ? i === activeArg : false;
+                    var arg = fnArgs.args[i]; //name,type
+                    var name = arg.name || "?";
+                    if (!useDetailedArgHints) {
+                        paramStr += name;
+                    }
+                    else {
+                        var param = getParam(arg, false);
+                        var children = getParam(arg, true);
+                        var type = arg.type;
+                        var optional = false;
+                        var defaultValue = '';
+                        if (param !== null) {
+                            name = param.name;
+                            if (param.type) {
+                                type = param.type;
+                            }
+                            if (isCurrent) {
+                                activeParam = param;
+                            }
+                            optional = param.optional;
+                            defaultValue = param.defaultValue.trim();
+                        }
+                        if (children && children.length > 0) {
+                            if (isCurrent) {
+                                activeParamChildren = children;
+                            }
+                            type = "{";
+                            for (var c = 0; c < children.length; c++) {
+                                type += children[c].name;
+                                if (c + 1 !== children.length && children.length > 1) type += ", ";
+                            }
+                            type += "}";
+                        }
+                        paramStr += type ? '<span class="' + cls + 'type">' + type + '</span> ' : '';
+                        paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (name || "?") + '</span>';
+                        if (defaultValue !== '') {
+                            paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + defaultValue + '</span>';
+                        }
+                        if (optional) {
+                            paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
+                        }
+                    }
+                    if (i > 0) paramStr = ', ' + paramStr;
+                    typeStr += paramStr;
+                }
+                
+                
+                typeStr += ")";
+                if (fnArgs.rettype) {
+                    if (useDetailedArgHints) {
+                        typeStr += ' -> <span class="' + cls + 'type">' + fnArgs.rettype + '</span>';
+                    }
+                    else {
+                        typeStr += ' -> ' + fnArgs.rettype;
                     }
                 }
-                catch (ex) {
-                    showError(ts, editor, ex);
-                }
-                return str;
-            };
-            var highlightTypes = function(str) {
-                try {
-                    var re = /\s{[^}]{1,50}}\s/g;
-                    var m;
-                    //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
-                    while ((m = re.exec(str)) !== null) {
-                        if (m.index === re.lastIndex) {
-                            re.lastIndex++;
+                typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
+        
+                //if this is for arg hints, then show parameter details only for active param
+                if(useDetailedArgHints){
+                    if (activeParam && activeParam.description) {
+                        typeStr += '<div class="' + cls + 'farg-current-description"><span class="' + cls + 'farg-current-name">' + activeParam.name + ': </span>' + activeParam.description + '</div>';
+                    }
+                    //add active param children details
+                    if (activeParamChildren && activeParamChildren.length > 0) {
+                        for (var i = 0; i < activeParamChildren.length; i++) {
+                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
+                            typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
                         }
-                        str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
                     }
                 }
-                catch (ex) {
-                    showError(ts, editor, ex);
+                tip.appendChild(elFromString(typeStr));
+            }
+        }
+        if(isNaN(parseInt(activeArg))){
+            if (data.doc) {
+        
+                //#region Parse Comments
+        
+                /**
+                 * Replaces param tags and their type, name, description with formatted html;
+                 * This is not fullproof (made very quickly)
+                 * @param {string} str - comments to parse
+                 * @param {object[]} params - result of parseJsDocParams()
+                 */
+                var replaceParams = function(str, params) {
+                    if (params.length === 0) {
+                        return str;
+                    }
+        
+                    //#region strip params from input
+                    str = str.replace(/@param/gi, '@param'); //make sure all param tags are lowercase
+                    var beforeParams = str.substr(0, str.indexOf('@param'));
+                    while (str.indexOf('@param') !== -1) {
+                        str = str.substring(str.indexOf('@param') + 6); //starting after first param match
+                    }
+                    //all params have been parsed out but we likely have a fragment of the last params type, name, and description remaining
+                    if (str.indexOf('@') !== -1) {
+                        str = str.substr(str.indexOf('@')); //start at next tag that is not a param
+                    }
+                    else {
+                        str = ''; //@param was likely the last tag, trim remaining as its likely the end of a param description
+                    }
+                    //#endregion
+        
+                    //#region append formatted params to description that is stripped of params
+                    var paramStr='';
+                    for (var i = 0; i < params.length; i++) {
+                        paramStr += '<div>';
+                        if (params[i].parentName.trim() === '') {
+                            paramStr += '<span class="' + cls + 'jsdoc-tag">@param</span> ';
+                        }
+                        else {
+                            paramStr += '<span class="' + cls + 'jsdoc-tag-param-child">&nbsp;</span> '; //dont show param tag for child param
+                        }
+                        paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
+                    
+                        if (params[i].name.trim() !== '') {
+                            var name = params[i].name.trim();
+                            if (params[i].parentName.trim() !== '') {
+                                name = params[i].parentName.trim() + '.' + name;
+                            }
+                            var pName = '<span class="' + cls + 'jsdoc-param-name">' + name + '</span>';
+                            if (params[i].defaultValue.trim() !== '') {
+                                pName += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + params[i].defaultValue + '</span>';
+                            }
+                            if (params[i].optional) {
+                                pName = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + pName + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
+                            }
+                            paramStr += pName;
+                        }
+                        paramStr += params[i].description.trim() === '' ? '' : ' - <span class="' + cls + 'jsdoc-param-description">' + params[i].description + '</span>';
+                        paramStr += '</div>';
+                    }
+                    if(paramStr !== ''){
+                        str+= '<div class="'+cls+'jsdoc-param-wrapper">'+paramStr+'</div>';
+                    }
+                    //#endregion
+        
+                    return beforeParams + str;
+                };
+                var highlighTags = function(str) {
+                    try {
+                        var re = /\s@\w{1,50}\s/gi;
+                        var m;
+                        //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                        while ((m = re.exec(str)) !== null) {
+                            if (m.index === re.lastIndex) {
+                                re.lastIndex++;
+                            }
+                            str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
+                        }
+                    }
+                    catch (ex) {
+                        showError(ts, editor, ex);
+                    }
+                    return str;
+                };
+                var highlightTypes = function(str) {
+                    try {
+                        var re = /\s{[^}]{1,50}}\s/g;
+                        var m;
+                        //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
+                        while ((m = re.exec(str)) !== null) {
+                            if (m.index === re.lastIndex) {
+                                re.lastIndex++;
+                            }
+                            str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
+                        }
+                    }
+                    catch (ex) {
+                        showError(ts, editor, ex);
+                    }
+                    return str;
+                };
+        
+        
+                if (d.substr(0, 1) === '*') {
+                    d = d.substr(1); //tern leaves this for jsDoc as they start with /**, not exactly sure why...
                 }
-                return str;
-            };
-            if (d.substr(0, 1) === '*') {
-                d = d.substr(1); //tern leaves this for jsDoc as they start with /**, not exactly sure why...
-            }
-            if(inclueType){
-                d = " - " + d + " "; //separate from type that starts it, and add end space for regexps to work if last char is a tag
-            }
-            else{
+                /*if (includeType) {
+                    d = " - " + d + " "; //separate from type that starts it, and add end space for regexps to work if last char is a tag
+                }*/
                 d = d.trim();
+                d = replaceParams(d, params);
+                d = highlighTags(d);
+                d = highlightTypes(d);
+                tip.appendChild(elFromString(d));
+                //#endregion
             }
-            d = highlighTags(d);
-            d = highlightTypes(d);
-            tip.appendChild(elFromString(d));
-            //#endregion
-        }
-        if (data.url) {
-            tip.appendChild(document.createTextNode(" "));
-            var link = elt("a", null, "[docs]");
-            link.target = "_blank";
-            link.href = data.url;
-            tip.appendChild(link);
-        }
-        if (data.origin) {
-            tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
+            if (data.url) {
+                tip.appendChild(document.createTextNode(" "));
+                var link = elt("a", null, "[docs]");
+                link.target = "_blank";
+                link.href = data.url;
+                tip.appendChild(link);
+            }
+            if (data.origin) {
+                tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
+            }
         }
         return tip;
     }
@@ -1132,6 +1333,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @returns {array(name,type,description,optional,defaultValue)}
      */
     function parseJsDocParams(str){
+        if (!str) return [];
         str = str.replace(/@param/gi, '@param'); //make sure all param tags are lowercase
         var params = [];
         while (str.indexOf('@param') !== -1) {
@@ -1252,7 +1454,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             var tip = makeTooltip(null, null, header, editor, false, - 1);
             //data.name + '(' + data.type + ') References \n-----------------------------------------'
 
-           /*//add close button 10.13.2014- close button is built in
+            /*//add close button 10.13.2014- close button is built in
             var closeBtn = elt('span', '', 'close');
             closeBtn.setAttribute('style', 'cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
             closeBtn.addEventListener('click', function() {
@@ -1308,8 +1510,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     targetDoc = doc; //current doc
                     updatePosDelay = 50;
                 }
-                var animatedScroll =editor.getAnimatedScroll();
-                if(animatedScroll){
+                var animatedScroll = editor.getAnimatedScroll();
+                if (animatedScroll) {
                     //disable this as there is no way to know for sure when the thing is done scrolling
                     editor.setAnimatedScroll(false);
                 }
@@ -1318,8 +1520,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 setTimeout(function() {
                     moveTooltip(tip, null, null, editor);
                     closeAllTips(tip); //close any tips that moving this might open, except for the ref tip
-                    if(animatedScroll){
-                        editor.setAnimatedScroll(true);//re-enable
+                    if (animatedScroll) {
+                        editor.setAnimatedScroll(true); //re-enable
                     }
                 }, updatePosDelay);
             });
@@ -1676,129 +1878,44 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         closeArgHints(ts);
         var cache = ts.cachedArgHints,
             tp = cache.type,
-            comments= cache.comments;//added by morgan to include document comments
-            
+            comments = cache.comments; //added by morgan to include document comments
+    
         //parse comments to use for type!
-        if(!cache.hasOwnProperty('params')){
-            if(!cache.comments){
-                cache.params=null;
+        if (!cache.hasOwnProperty('params')) {
+            if (!cache.comments) {
+                cache.params = null;
             }
-            else{
+            else {
                 var params = parseJsDocParams(cache.comments);
-                if(!params || params.length ===0){
-                    cache.params=null;
-                }
-                else{
-                    cache.params=params;
-                }
-            }
-        }
-        /**
-         * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
-         * @param {object} arg - name and type
-         * @param {bool} getChildren - if true, will return array of child params
-         */
-        var getParam=function(arg, getChildren){
-            if(cache.params===null)return null;
-            if(!arg.name)return null;
-            var children=[];
-            for (var i = 0; i < cache.params.length; i++) {
-                if(getChildren===true){
-                    if (cache.params[i].parentName.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
-                        children.push(cache.params[i]);
-                    }
-                }
-                else{
-                    if (cache.params[i].name.toLowerCase().trim() === arg.name.toLowerCase().trim()) {
-                        return cache.params[i];
-                    }
-                }
-            }
-            if(getChildren===true) return children;
-            return null;
-        };
-        /**
-         * gets name string for param that includes default value and optional
-         */
-        var getParamDetailedName= function(param){
-            var name = param.name;
-            if(param.optional===true){
-                if (param.defaultValue) {
-                    name = "[" + name + "=" + param.defaultValue + "]";
+                if (!params || params.length === 0) {
+                    cache.params = null;
                 }
                 else {
-                    name = "[" + name + "]";
+                    cache.params = params;
                 }
-            }
-            return name;
-        };
-            
-        var tip = elt("span", cache.guess ? cls + "fhint-guess" : null,
-        elt("span", cls + "fname", cache.name), "(");
-        
-         var activeParam=null,
-        activeParamChildren=[];//one ore more child params for multiple object properties
-        for (var i = 0; i < tp.args.length; ++i) {
-            var isCurrent = i == pos;
-            if (i) tip.appendChild(document.createTextNode(", "));
-            var arg = tp.args[i]; //name,type
-        
-            //added by morgan: use param comments if available
-            var param = getParam(arg, false);
-            var children = getParam(arg, true);
-            var name = arg.name || "?";
-            var type = arg.type;
-            if (param !== null) {
-                name = getParamDetailedName(param);
-                if (param.type) {
-                    type = param.type;
-                }
-                if (isCurrent) {
-                    activeParam = param;
-                }
-            }
-            if (children && children.length > 0) {
-                if (isCurrent) {
-                    activeParamChildren = children;
-                }
-                type = "{";
-                for (var i = 0; i < children.length; i++) {
-                    type += children[i].name;
-                    if (i + 1 !== children.length && children.length > 1) type += ", ";
-                }
-                type += "}";
-            }
-        
-            tip.appendChild(elt("span", cls + "farg" + (isCurrent ? " " + cls + "farg-current" : ""), name || "?"));
-            if (type != "?") {
-                tip.appendChild(document.createTextNode(":\u00a0"));
-                tip.appendChild(elt("span", cls + "type", type));
             }
         }
-        tip.appendChild(document.createTextNode(tp.rettype ? ") ->\u00a0" : ")"));
-        if (tp.rettype) tip.appendChild(elt("span", cls + "type", tp.rettype));//TODO: add return type from comments
-        
-        //add active param details
-        if(activeParam && activeParam.description){
-            tip.appendChild(elFromString('<div class="'+cls+'farg-current-description"><span class="'+cls+'farg-current-name">'+activeParam.name+': </span>'+activeParam.description+'</div>'));
-        }
-        //add active param children details
-        if(activeParamChildren && activeParamChildren.length>0){
-            
-            for (var i = 0; i < activeParamChildren.length; i++) {
-                var t = activeParamChildren[i].type? '<span class="' + cls + 'type">{' + activeParamChildren[i].type+ '} </span>' : '';
-                tip.appendChild(elFromString('<div class="'+cls+'farg-current-description">'+t+'<span class="'+cls+'farg-current-name">'+getParamDetailedName(activeParamChildren[i])+': </span>'+activeParamChildren[i].description+'</div>'));
-            }
-        }
-
-        //get cursor location- there is likely a better way to do this...
+    
         var place = getCusorPosForTooltip(editor);
-        ts.activeArgHints = makeTooltip(place.left, place.top, tip, editor, true); //note: this closes on scroll and cursor activity, so the closeArgHints call at the top of this wont need to remove the tip
+        var data = {
+            name: cache.name,
+            guess: cache.guess,
+            fnArgs: cache.type,
+            doc: cache.comments,
+            params: cache.params,
+        };
+        var tip = createInfoDataTip(data, true, pos);
+        ts.activeArgHints = makeTooltip(place.left, place.top, tip, editor, true);
+        return;
     }
     /**
-     * Not exactly sure what this does
+     * Parses result of terns type string into an array of arguments and a return type
+     * @returns {null | (args:array(name,type), rettype)} null if failed to parse
      */
     function parseFnType(text) {
+        if (text.substring(0, 2) !== 'fn') return null;//not a function
+        if (text.indexOf('(') === -1) return null;
+        
         var args = [],
             pos = 3;
 
@@ -1862,7 +1979,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * (10.10.2014) Creates document fragment (element) from html string
      */
-    function elFromString(s){
+    function elFromString(s) {
         var frag = document.createDocumentFragment(),
             temp = document.createElement('span');
         temp.innerHTML = s;
@@ -1930,7 +2047,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
-        
+
         //add close button
         var closeBtn = document.createElement('a');
         closeBtn.setAttribute('title', 'close');
@@ -2166,7 +2283,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {object} data - contains documentation for function, start (ch,line), end(ch,line), file, context, contextOffset, origin
      */
     function findContext(editor, data) {
-        try{
+        try {
             var before = data.context.slice(0, data.contextOffset).split("\n");
             var startLine = data.start.line - (before.length - 1);
             var ch = null;
@@ -2177,7 +2294,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 ch = editor.session.getLine(startLine).length - before[0].length;
             }
             var start = Pos(startLine, ch);
-        
+
             var text = editor.session.getLine(startLine).slice(start.ch);
             for (var cur = startLine + 1; cur < editor.session.getLength() && text.length < data.context.length; ++cur) {
                 text += "\n" + editor.session.getLine(cur);
@@ -2187,8 +2304,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             // because there is a bug that is causing it to miss by one char
             // and I dont know when the part below would ever be needed (I guess we will find out when it doesnt work)
         }
-        catch(ex){
-            console.log('ext-tern.js findContext Error; (error is caused by a doc (string) being passed to this function instead of editor due to ghetto hack from adding VS refs... need to fix eventually. should only occur when jumping to def in separate file)',ex);//,'\neditor:',editor,'\ndata:',data);
+        catch (ex) {
+            console.log('ext-tern.js findContext Error; (error is caused by a doc (string) being passed to this function instead of editor due to ghetto hack from adding VS refs... need to fix eventually. should only occur when jumping to def in separate file)', ex); //,'\neditor:',editor,'\ndata:',data);
         }
         return data;
 
@@ -2472,11 +2589,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 25em; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { font-weight:bold; font-size:larger; } .Ace-Tern-type { color: #07c; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; }");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:60em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } ");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
     //FOR CARET ONLY-- override css above as carets default font size is stupid small
-    dom.importCssString(".Ace-Tern-tooltip {font-size:110%;}");
+    dom.importCssString(".Ace-Tern-tooltip {font-size:120%;}");
     //#endregion
 
 
