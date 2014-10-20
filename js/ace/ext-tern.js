@@ -1055,7 +1055,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @returns {element} for tooltip from data
      * @param {object} data - info about an object from tern
      * @param {string} [data.name] - name of object
-     * @param {string} [data.doc] - comments (or documentation) 
+     * @param {string} [data.doc] - comments (or documentation)
      * @param {string} [data.url] - url to info about object for creating link
      * @param {string} [data.origin] - source name of the object
      * @param {object[]} [data.params] - result of parseJsDocParams(data.doc) to prevent re-parsing
@@ -1072,7 +1072,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var params =data.params ||  parseJsDocParams(d); //parse params
     
         if (includeType) {
-            var fnArgs = data.fnArgs ? data.fnArgs : data.type ? parseFnType(data.type) : null; //will be null if parseFnType detects that this is not a function 
+            var fnArgs = data.fnArgs ? data.fnArgs : data.type ? parseFnType(data.type) : null; //will be null if parseFnType detects that this is not a function
            if (fnArgs) {
                 /**
                  * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
@@ -1268,6 +1268,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 };
                 var highlighTags = function(str) {
                     try {
+                        str = ' ' +str +' ';//add white space for regex
                         var re = /\s@\w{1,50}\s/gi;
                         var m;
                         //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
@@ -1277,13 +1278,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             }
                             str = str.replace(m[0], '<br/><span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
                         }
+                        str = str.trim();
+                        //if there are no characters before first tag, then remove first line break
+                        if(str.length> 5 && str.substr(0,5) === '<br/>'){
+                            str = str.substr(5);
+                        }
                     }
                     catch (ex) {
                         showError(ts, editor, ex);
                     }
-                    return str;
+                    return str.trim();
                 };
                 var highlightTypes = function(str) {
+                    str = ' ' +str +' ';//add white space for regex
                     try {
                         var re = /\s{[^}]{1,50}}\s/g;
                         var m;
@@ -1298,7 +1305,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     catch (ex) {
                         showError(ts, editor, ex);
                     }
-                    return str;
+                    return str.trim();
                 };
         
         
