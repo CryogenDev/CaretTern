@@ -1,6 +1,9 @@
 /* Tern web worker, which is used by default
  * This file also contains all files that are needed for the web worker to run (the server can load files on demand, but its messy to have all these files for once peice of ace functionality) *
- * 
+ *
+ * doc_comment.js has a line commented out because its annoying: if (dot > 5) first = first.slice(0, dot + 1);
+ *      (this line causes returned comments for functions to be trimmed after first string)
+ *
  * Versions:
  *      Acorn: 0.6.0
  *      Tern:  0.6.3
@@ -9354,7 +9357,7 @@ var console = {
     }
 
     var first = comments[0], dot = first.search(/\.\s/);
-    if (dot > 5) first = first.slice(0, dot + 1);
+    //if (dot > 5) first = first.slice(0, dot + 1); // removed by morgan- this is stupid as it removes all comments after first sentence
     first = first.trim().replace(/\s*\n\s*\*\s*|\s{1,}/g, " ");
     if (aval instanceof infer.AVal) aval.doc = first;
     if (type) type.doc = first;
