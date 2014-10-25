@@ -799,7 +799,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             return false;
         };
         var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
-        
+
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -991,7 +991,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 //make tooltip
                 var node = editor.completer.popup.renderer.getContainerElement();
-                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data,true), editor);
+                tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data, true), editor);
                 tooltip.className += " " + cls + "hint-doc";
             }
 
@@ -1005,8 +1005,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         });
     }
     /**
-     * shows type info
-     * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only
+     * shows type/definition of object at current cursor location via tooltip
+     * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only;
+     * 
+     * @note: this first performs a 'type' request, and if the result of the type request is not a function, (meaning its a native type like number,date, etc...) then this will do another request for 'definition' that includes the comments for the object. The second request will be appended to the first request to give us both the type and definition information
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
         if (calledFromCursorActivity) { //check if currently in call, if so, then exit
@@ -1018,8 +1020,16 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 return;
             }
         }
-
-        var cb = function(error, data) {
+    
+        /**
+         * handles result of request
+         * @param {object} data - result of request (can be either a 'type' or 'definition' request)
+         * @param {object} typeData - result of request 'type' request prior to to this request (if 2nd request, then this is a data request)
+         * 
+         * @note a type request data is: {doc,[origin(only for fn)],exprName,name,type,url} - the doc/url here are uesless for non function types as they are for native javascript types
+         * @note a definition request data is: {doc,origin,context,contextOffset,start,end,file}
+         */
+        var cb = function(error, data, typeData) {
             var tip = '';
             if (error) {
                 if (calledFromCursorActivity) {
@@ -1027,19 +1037,43 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 return showError(ts, editor, error);
             }
-            if (ts.options.typeTip) { //this is not entered in Morgans tests
+            if (ts.options.typeTip) { //dont know when this is ever entered... was in code mirror plugin...
                 tip = ts.options.typeTip(data);
             }
             else {
-                //cursor activity
                 if (calledFromCursorActivity) {
+                    //if called from cursor activity, then this is less important so dont show unless something meaning full
                     if (data.hasOwnProperty('guess') && data.guess === true) return; //dont show guesses on auto activity as they are not accurate
                     if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type == "fn()") {
                         return;
                     }
                 }
-                tip = createInfoDataTip(data, true);
+            
+                if (data.hasOwnProperty('type')) { //type query (first try)
+                    if (data.type == "?") {
+                        tip = tempTooltip(editor, elFromString('<span>?</span>'));
+                        return;
+                    }
+                    if (data.type.toString().length > 1 && data.type.toString().substr(0, 2) !== 'fn') {
+                        var innerCB = function(error, definitionData) {
+                            cb(error, definitionData, data);
+                        };
+                        //type is not function, which means this returned relatively useless information, so lets try getting definition
+                        ts.request(editor, "definition", innerCB, pos, false, null);
+                        return;
+                    }
+                }
+                else{ //data is a definition request
+                    if (typeData && typeData.hasOwnProperty('type')) {
+                        //typeData passed from prior callback, merge data to get most complete results for tooltip
+                        data.type = typeData.type;
+                        data.name = typeData.name;
+                        data.exprName = typeData.exprName;
+                    }
+                }
             }
+            tip = createInfoDataTip(data, true);
+    
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
             setTimeout(function() {
                 var place = getCusorPosForTooltip(editor);
@@ -1048,7 +1082,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
         };
-
+    
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
     }
     /**
@@ -1116,7 +1150,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 //use detailed argHints if called from argHints (activeArg is number) OR there are no params passed from js doc (which means we will let tern interpret param details)
                 var useDetailedArgHints = params.length === 0 || !isNaN(parseInt(activeArg));
                 var typeStr = '';
-                typeStr += data.exprName || data.name || "fn";
+                typeStr += htmlEncode(data.exprName || data.name || "fn");
                 typeStr += "(";
                 var activeParam = null,
                     activeParamChildren = []; //one ore more child params for multiple object properties
@@ -1128,7 +1162,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     var arg = fnArgs.args[i]; //name,type
                     var name = arg.name || "?";
                     if (!useDetailedArgHints) {
-                        paramStr += name;
+                        paramStr += htmlEncode(name);
                     }
                     else {
                         var param = getParam(arg, false);
@@ -1158,10 +1192,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             }
                             type += "}";
                         }
-                        paramStr += type ? '<span class="' + cls + 'type">' + type + '</span> ' : '';
-                        paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (name || "?") + '</span>';
+                        paramStr += type ? '<span class="' + cls + 'type">' + htmlEncode(type) + '</span> ' : '';
+                        paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "?") + '</span>';
                         if (defaultValue !== '') {
-                            paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + defaultValue + '</span>';
+                            paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + htmlEncode(defaultValue) + '</span>';
                         }
                         if (optional) {
                             paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
@@ -1175,10 +1209,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 typeStr += ")";
                 if (fnArgs.rettype) {
                     if (useDetailedArgHints) {
-                        typeStr += ' -> <span class="' + cls + 'type">' + fnArgs.rettype + '</span>';
+                        typeStr += ' -> <span class="' + cls + 'type">' + htmlEncode(fnArgs.rettype) + '</span>';
                     }
                     else {
-                        typeStr += ' -> ' + fnArgs.rettype;
+                        typeStr += ' -> ' + htmlEncode(fnArgs.rettype);
                     }
                 }
                 typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
@@ -1266,6 +1300,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         
                     return beforeParams + str;
                 };
+                /**
+                 * @returns {string} with jsdoc tags (starts with @ symbol) highlighted via html
+                 */
                 var highlighTags = function(str) {
                     try {
                         str = ' ' +str +' ';//add white space for regex
@@ -1289,6 +1326,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                     return str.trim();
                 };
+                /**
+                 * @returns {string} with jsdoc types (inside of curly brackets) highlighted via html
+                 */
                 var highlightTypes = function(str) {
                     str = ' ' +str +' ';//add white space for regex
                     try {
@@ -1307,6 +1347,33 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                     return str.trim();
                 };
+                /**
+                 * @returns {string} with urls turned into html links;
+                 * @param {str} string that has already been html encoded
+                 */
+                var createLinks = function(str){
+                    try{
+                        //place holders for replacing each match to ensure they no longer match, which will then get replaced again at end of function
+                        var httpProto = 'HTTP_PROTO_PLACEHOLDER';
+                        var httpsProto = 'HTTPS_PROTO_PLACEHOLDER';
+                        var re = /\bhttps?:\/\/[^\s<>"`{}|\^\[\]\\]+/gi;
+                        var m;
+                        while ((m = re.exec(str)) !== null) {
+                            if (m.index === re.lastIndex) {
+                                re.lastIndex++;
+                            }
+                            var withoutProtocol = m[0].replace(/https/i, httpsProto).replace(/http/i, httpProto);
+                            var text = m[0].replace(new RegExp('https://', 'i'), '').replace(new RegExp('http://', 'i'), '');
+                            str = str.replace(m[0], '<a class="'+cls+'tooltip-link" href="' + withoutProtocol + '" target="_blank">' + text + ' </a>');
+                        }
+                        //now replace protocol place holders with protocol
+                        str = str.replace(new RegExp(httpsProto,'gi'),'https').replace(new RegExp(httpProto,'gi'),'http');
+                    }
+                    catch(ex){
+                        showError(ts,editor,ex);
+                    }
+                    return str;
+                };
         
         
                 if (d.substr(0, 1) === '*') {
@@ -1315,10 +1382,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 /*if (includeType) {
                     d = " - " + d + " "; //separate from type that starts it, and add end space for regexps to work if last char is a tag
                 }*/
-                d = d.trim();
+                d = htmlEncode(d.trim());
                 d = replaceParams(d, params);
                 d = highlighTags(d);
                 d = highlightTypes(d);
+                d = createLinks(d);
                 tip.appendChild(elFromString(d));
                 //#endregion
             }
@@ -1423,7 +1491,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 thisParam.description = paramStr.replace('-', '').trim(); //optional hiphen specified before start of description
             }
             //#endregion
-    
+            
+            //escape html
+            thisParam.name = htmlEncode(thisParam.name);
+            thisParam.parentName = htmlEncode(thisParam.parentName);
+            thisParam.description = htmlEncode(thisParam.description);
+            thisParam.type = htmlEncode(thisParam.type);
+            thisParam.defaultValue = htmlEncode(thisParam.defaultValue);
             params.push(thisParam);
         }
         return params;
@@ -1965,6 +2039,21 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     //#region tooltips
+    
+    /**
+     * @returns {string} html escaped string
+     */
+    function htmlEncode(string) {
+        var entityMap = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+        };
+        return String(string).replace(/[&<>]/g, function(s) {
+            if(!s) return '';
+            return entityMap[s];
+        });
+    }
     /**
      * returns the difference of posistion a - posistion b (returns difference in line if any, then difference in ch if any)
      * Will return 0 if posistions are the same; (note: automatically converts to ternPosistion)
@@ -2596,7 +2685,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } ");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} ");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
     //FOR CARET ONLY-- override css above as carets default font size is stupid small
