@@ -1051,7 +1051,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             
                 if (data.hasOwnProperty('type')) { //type query (first try)
                     if (data.type == "?") {
-                        tip = tempTooltip(editor, elFromString('<span>?</span>'));
+                        tip = tempTooltip(editor, elFromString('<span>?</span>'),1000);
                         return;
                     }
                     if (data.type.toString().length > 1 && data.type.toString().substr(0, 2) !== 'fn') {
