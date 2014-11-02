@@ -16,7 +16,8 @@ function(require, exports, module) {
 
     //#region LoadCompletors_fromLangTools
 
-    /* Copied from ext-language_tools.js
+    /**
+     * Copied from ext-language_tools.js
      * needed to allow completors for all languages
      * adds extra logic to disable keyword and basic completors for javscript mode and enable tern instead
      */
@@ -159,6 +160,7 @@ function(require, exports, module) {
         //debounce to auto show type
         clearTimeout(debounce_ternShowType);
         debounce_ternShowType = setTimeout(function() {
+            //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
         }, 300);
 
@@ -256,7 +258,6 @@ function(require, exports, module) {
             },
             value: false
         }
-        //ADD OPTIONS FOR TERN HERE... maybe-- or just let the exports do it
     });
     //#endregion
 });
@@ -380,6 +381,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             bindKey: "Alt-R"
         }
     };
+    /** @type {bool} set to true log info about completions */
+    var debugCompletions=false;
 
     //#endregion
 
@@ -553,6 +556,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
             if (!this.options.useWorker) return;
             this.server.sendDebug(message);
+        },
+        /** @param {bool} value - set to true to log debug info about get completions */
+        debugCompletions: function(value){
+            if (value) debugCompletions = true;
+            else debugCompletions = false;
         },
     };
 
@@ -800,6 +808,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         };
         var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
 
+        var groupName='';
+        if (debugCompletions) {
+            groupName=Math.random().toString(36).slice(2);
+            console.group(groupName);
+            console.time('get completions from tern server');
+        }
         ts.request(editor, {
             type: "completions",
             types: true,
@@ -814,6 +828,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         },
 
         function(error, data) {
+            if (debugCompletions) console.timeEnd('get completions from tern server');
             if (error) {
                 return showError(ts, editor, error);
             }
@@ -834,6 +849,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
             //#region OtherCompletions
+            if (debugCompletions) console.time('get and merge other completions');
+            
             var otherCompletions = [];
             //if basic auto completion is on, then get keyword completions that are not found in tern results
             if (editor.getOption('enableBasicAutocompletion') === true) {
@@ -844,14 +861,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-
-
+            
+            
             if ((forceEnableAceTextCompletor || ternCompletions.length === 0) && ts.aceTextCompletor) {
-                //console.time('aceTextCompletor');
+                if (debugCompletions) console.time('aceTextCompletor');
                 var textCompletions = [];
                 //9.30.2014- sometimes tern just fails with complex javascript.. If this is the case, lets use the built in ace text completor to get information instead of the more advanced 'local strings' below;
                 //this is only used when tern fails as it will contain stuff that tern should already contain, but when tern fails this stuff is all missing so get it how ever we can
-                //note that this can easily take 100ms to get these completions and merge them
+                //note that this can easily take 500ms to get these completions and merge them (merge is fast, getting text completions is very slow for lage files!)
                 try {
                     ts.aceTextCompletor.getCompletions(editor, session, pos, prefix, function(error, data) {
                         textCompletions = data.map(function(item) {
@@ -895,9 +912,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     showError(ts, editor, 'ace text completor error:' + ex);
                 }
                 //console.log('textCompletions',textCompletions); console.log('otherCompletions',otherCompletions);
-                //console.timeEnd('aceTextCompletor');
+                if (debugCompletions) console.timeEnd('aceTextCompletor');
             }
             else {
+                if (debugCompletions) console.time('tern local string completions');
                 //add local string completions if enabled, this is far more useful than the local text completions
                 // gets string tokens that have no spaces or quotes that are longer than min length, tested on 5,000 line doc and takes about ~10ms
                 var ternLocalStringMinLength = editor.getOption('ternLocalStringMinLength');
@@ -931,6 +949,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                     }
                 }
+                if (debugCompletions) console.timeEnd('tern local string completions');
             }
 
             //now merge other completions with tern (tern has priority)
@@ -952,11 +971,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 ternCompletions = mergedCompletions.slice();
             }
+            if (debugCompletions)  console.timeEnd('get and merge other completions');
             //#endregion
 
 
             //callback goes to the lang tools completor
             callback(null, ternCompletions);
+            
+            if(debugCompletions) console.groupEnd(groupName);
+            
 
             var tooltip = null;
             //COMEBACK: also need to bind popup close and update (update likely means when the tooltip has to move) (and hoever over items should move tooltip)
@@ -1533,19 +1556,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             header.appendChild(title);
 
             var tip = makeTooltip(null, null, header, editor, false, - 1);
-            //data.name + '(' + data.type + ') References \n-----------------------------------------'
-
-            /*//add close button 10.13.2014- close button is built in
-            var closeBtn = elt('span', '', 'close');
-            closeBtn.setAttribute('style', 'cursor:pointer; color:red; text-decoration:underline; float:right; padding-left:10px;');
-            closeBtn.addEventListener('click', function() {
-                remove(tip);
-            });
-            header.appendChild(closeBtn);*/
-
-            //add divider
-            //tip.appendChild(elt('div','','-----------------------------------------------'));
-
             if (!data.refs || data.refs.length === 0) {
                 tip.appendChild(elt('div', '', 'No References Found'));
                 return;
@@ -1623,6 +1633,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 height = height > 175 ? 175 : height;
                 refInput.style.height = height + "px";
                 tip.appendChild(refInput);
+                //refInput.focus();//log(refInput); //try to focus on the thing but it doesnt work.. not a big deal but a bit annoying
             };
 
             for (var i = 0; i < data.refs.length; i++) {
@@ -1824,13 +1835,21 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region ArgHints
 
+
     /**
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
      * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
+     * @returns {undefined | (argpos,start(ch,line))} call pos object or undefined if not in call pos
+     * 
+     * @issue: arg pos gets thrown off when using format where functions end with commas instead of semi colons as the end of one function may be scanned and its trailing commma will throw off the arg pos; Possible solutions: 1. Figure out how to ignore this comma; 2. Somehow check call pos without scanning all the previous lines (dont think this will work. would want to  use something like isOnFunctionCall without the first 3 checks )
      */
     function getCallPos(editor, pos) {
         if (somethingIsSelected(editor)) return;
         if (!inJavascriptMode(editor)) return;
+        
+        
+        //#region setup
+        var d='';//debug
         var start = {}; //start of query to tern (start of the call location)
         var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
         currentPosistion = toAceLoc(currentPosistion); //just in case
@@ -1843,31 +1862,42 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var depth = 0;
         //argument posistion
         var argpos = 0;
-        //iterate backwards through each row
+        //#endregion
+        
+        
+        //#region iterate backwards through each row
         for (var row = currentLine; row >= firstLineToCheck; row--) {
             var thisRow = editor.session.getLine(row);
+            d+= '\n'+row+': '+thisRow.trim();
             if (row === currentLine) {
                 thisRow = thisRow.substr(0, currentCol);
-            } //for current line, only get up to cursor posistion
+            } 
+            
+            //#region for current line, only get up to cursor posistion
             for (var col = thisRow.length; col >= 0; col--) {
                 ch = thisRow.substr(col, 1);
+                //d += '\t' + ch + '; ';
                 if (ch === '}' || ch === ')' || ch === ']') {
                     depth += 1;
+                    d += '\n' + ch + ': ' + 'depth+1';
                 }
                 else if (ch === '{' || ch === '(' || ch === '[') {
                     if (depth > 0) {
                         depth -= 1;
+                        d += '\n' + ch + ': ' + 'depth-1';
                     }
                     else if (ch === '(') {
                         //check before call start to make sure its not a function definition
                         var wordBeforeFnName = thisRow.substr(0, col).split(' ').reverse()[1];
                         if (wordBeforeFnName && wordBeforeFnName.toLowerCase() === 'function') {
+                            d += '\n' + ch + ': ' + 'break because fn definition';
                             break;
                         }
                         //Make sure this is not in a comment or start of a if statement
                         var token = editor.session.getTokenAt(row, col);
                         if (token) {
                             if (token.type.toString().indexOf('comment') !== -1 || token.type === 'keyword') {
+                                d += '\n' + ch + ': ' + 'break because comment or keyword';
                                 break;
                             }
                         }
@@ -1875,24 +1905,46 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             line: row,
                             ch: col
                         };
+                        d += '\n' + ch + ': ' + 'final break';
                         break;
                     }
                     else {
+                        d += '\n' + ch + ': ' + ' depth=0 & ch not (final break)';
                         break;
                     }
                 }
                 else if (ch === ',' && depth === 0) {
-                    argpos += 1;
+                     var prev1 = col < 1? null :thisRow.substr(col-1,1);
+                     var prev2 = col < 2? null :thisRow.substr(col-2,1);
+                     if(prev1 === '}' || (prev1 === ' ' && prev2 === '}')){
+                         //added 11.2.2014 - appears to be working... but could break something else (needs more testing)
+                         //dont increment arg posistion
+                         //its likely that this row is the end of a function definition using notation where end of definition ends with comma isntead of semi-colon
+                         d += '\n' + ch + ': ' + ' (doing nothing because end is likely end of fn definition)';
+                     }
+                     else{
+                         argpos += 1;
+                         d += '\n' + ch + ': ' + 'argpos+1';
+                     }
                 }
             }
+            //#endregion
+            
         }
+        //console.log(d);//uncomment for debbuging
+        
+        //#endregion
+        
+        
+        //#region result
         if (!start.hasOwnProperty('line')) { //start not found
             return;
         }
         return {
             start: toTernLoc(start),
             "argpos": argpos
-        }; //convert
+        };
+        //#endregion
     }
     /**
      * Gets if editor is currently in call posistion
