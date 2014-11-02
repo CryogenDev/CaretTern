@@ -807,6 +807,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             return false;
         };
         var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
+        if(!forceEnableAceTextCompletor){
+            var t = getCurrentToken(editor);
+            if(t && t.type && t.type.indexOf('comment') !== -1) forceEnableAceTextCompletor=true;
+            //get all completions if user currently typing in a comment
+        }
 
         var groupName='';
         if (debugCompletions) {
