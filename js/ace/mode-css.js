@@ -28,7 +28,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-ace.define('ace/mode/css', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text', 'ace/mode/css_highlight_rules', 'ace/mode/matching_brace_outdent', 'ace/worker/worker_client', 'ace/mode/behaviour/css', 'ace/mode/folding/cstyle'], function(require, exports, module) {
+ace.define('ace/mode/css', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text', 'ace/mode/css_highlight_rules', 'ace/mode/matching_brace_outdent', 'ace/worker/worker_client', 'ace/mode/behaviour/css', 'ace/mode/folding/cstyle','css_with_region'], function(require, exports, module) {
 
 
 var oop = require("../lib/oop");
@@ -37,7 +37,8 @@ var CssHighlightRules = require("./css_highlight_rules").CssHighlightRules;
 var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
 var WorkerClient = require("../worker/worker_client").WorkerClient;
 var CssBehaviour = require("./behaviour/css").CssBehaviour;
-var CStyleFoldMode = require("./folding/cstyle").FoldMode;
+//var CStyleFoldMode = require("./folding/cstyle").FoldMode;
+var CStyleFoldMode = require("./folding/css_with_region").FoldMode;// use css region folding
 
 var Mode = function() {
     this.HighlightRules = CssHighlightRules;
@@ -810,5 +811,88 @@ oop.inherits(FoldMode, BaseFoldMode);
     };
 
 }).call(FoldMode.prototype);
+
+});
+
+/**
+* Added by morgan- adds region folding to javascript
+* Example : //#region Text //#endregion
+*/
+ace.define('ace/mode/folding/css_with_region', ['require', 'exports', 'module', 'ace/lib/oop', 'ace/range', 'ace/mode/folding/cstyle'], function (require, exports, module) {
+
+
+    var oop = require("../../lib/oop");
+    var Range = require("../../range").Range;
+    var CFoldMode = require("./cstyle").FoldMode;
+
+    var FoldMode = exports.FoldMode = function (commentRegex) {
+        if (commentRegex) {
+            this.foldingStartMarker = new RegExp(
+                this.foldingStartMarker.source.replace(/\|[^|]*?$/, "|" + commentRegex.start)
+            );
+            this.foldingStopMarker = new RegExp(
+                this.foldingStopMarker.source.replace(/\|[^|]*?$/, "|" + commentRegex.end)
+            );
+        }
+    };
+    oop.inherits(FoldMode, CFoldMode);
+
+    (function () {
+        this.getFoldWidgetRangeBase = this.getFoldWidgetRange;
+        this.getFoldWidgetBase = this.getFoldWidget;
+
+        this.getFoldWidget = function (session, foldStyle, row) {
+            var fw = this.getFoldWidgetBase(session, foldStyle, row);
+            if (!fw) {
+                var line = session.getLine(row);
+                if (/^\s*\/\*#region\b/.test(line))
+                    return "start";
+            }
+            return fw;
+        };
+
+        this.getFoldWidgetRange = function (session, foldStyle, row) {
+            var range = this.getFoldWidgetRangeBase(session, foldStyle, row);
+            if (range)
+                return range;
+
+            var line = session.getLine(row);
+
+            if (/^\s*\/\*#region\b/.test(line))
+                return this.getRegionBlock(session, line, row);
+        };
+        
+
+        this.getRegionBlock = function (session, line, row) {
+            var startColumn = line.search(/\s*$/);
+            var maxRow = session.getLength();
+            var startRow = row;
+
+            //var re = /^\s*#(end)?region\b/;
+            var re = /^\s*\/\*#(end)?region\b/;
+           
+            var depth = 1;
+            while (++row < maxRow) {
+                line = session.getLine(row);
+                var m = re.exec(line);
+                if (!m)
+                    continue;
+                if (m[1])
+                    depth--;
+                else
+                    depth++;
+
+                if (!depth)
+                    break;
+            }
+
+            var endRow = row;
+            if (endRow > startRow) {
+                var endColumn = line.search(/\S/);
+                return new Range(startRow, startColumn, endRow, endColumn);
+            }
+        };
+
+    }).call(FoldMode.prototype);
 
 });
