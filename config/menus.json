@@ -36,6 +36,14 @@
         "command": "ace:command",
         "argument": "redo"
     }, "divider", {
+        "label": "Beautify",
+        "command": "ace:command",
+        "argument":"beautify"
+    }, {
+        "label": "Remove Extra Blank and EOL",
+        "command": "ace:command",
+        "argument":"removeBlank"
+    }, "divider", {
         "label": "Insert from File",
         "command": "session:insert-from-file"
     }, {
@@ -121,12 +129,11 @@
     }]
 }, {
     "label": "Tools",
-    "sub": [
-        {
+    "sub": [{
         "label": "New Window",
         "command": "app:newwindow",
         "retainFocus": true
-    },{
+    }, {
         "label": "Go To Anything",
         "command": "palette:open",
         "retainFocus": true

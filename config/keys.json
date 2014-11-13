@@ -120,6 +120,9 @@
     "Ctrl-B": {
         "ace": "beautify"
     },
+    "Ctrl-Shift-B": {
+        "ace": "removeBlank"
+    },
     "Alt-.": {
         "ace": "ternJumpToDef"
     },

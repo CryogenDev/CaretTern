@@ -237,4 +237,7 @@ define(["command", "editor", "ui/statusbar", "settings!user,ace"], function(comm
         editor.insert(text);
         if (c) c();
     });
+    
+    
+   
 });

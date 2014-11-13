@@ -1,19 +1,19 @@
 /* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
 
 define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
-    
+
     //#region Default
-    
+
     //Module for loading the editor, adding window resizing and other events. Returns the editor straight from Ace.
     var userConfig = Settings.get("user");
     var aceConfig = Settings.get("ace");
     var editor = window.editor = ace.edit("editor");
     window.editor = editor; //for debugging
     var themes = document.querySelector(".theme");
-    
+
     //disable focusing on the editor except by program
     document.find("textarea").setAttribute("tabindex", - 1);
-    
+
     //one-time startup
     var init = function() {
         aceConfig.themes.forEach(function(theme) {
@@ -26,7 +26,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         //let main.js know this module is ready
         return "editor";
     };
-    
+
     //reloaded when settings change
     var reset = function() {
         userConfig = Settings.get("user");
@@ -62,8 +62,8 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                         //tell it how to get files for requirejs
                         editor.ternServer.options.getFile = function(name, callback) {
                             require(["ui/projectManager"], function(projectManager) {
-                                projectManager.readFile(name, function(err,data){
-                                    callback(err,data);
+                                projectManager.readFile(name, function(err, data) {
+                                    callback(err, data);
                                 });
                             });
                         };
@@ -93,7 +93,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
             });
         });
     };
-    
+
     //#endregion
 
 
@@ -1911,7 +1911,6 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         options.preserve_newlines = true;
         options.unescape_strings = true;
         options.jslint_happy = false;
-        options.indent_size = '4';
         options.indent_char = ' ';
         options.max_preserve_newlines = 2;
         options.preserve_newlines = options.max_preserve_newlines !== -1;
@@ -2057,6 +2056,32 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
     //#endregion
 
 
+    //#region removeBlank Command
+    /**
+     * Remove Unnecessary Blank and EOL (same as NotePad++ command)
+     * Added by Morgan;
+     * TODO: make this detect if there is selected text, and if this is the case then only remove blanks within the selected text
+     */
+    function aceRemoveBlank(editor) {
+        try {
+            editor.setValue(editor.getValue().replace(/\s+/g, " ").trim());
+        }
+        catch (ex) {}
+    }
+    //add command to ace
+    editor.commands.addCommand({
+        name: 'removeBlank',
+        bindKey: {
+            mac: "Command-Shift-B",
+            win: "Ctrl-Shift-B"
+        },
+        exec: aceRemoveBlank,
+        readOnly: false
+    });
+
+    //#endregion
+
+
     //#region ShowMessage
     window.alert = function(s) {
         command.fire("app:show-prompt");
@@ -2067,7 +2092,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
     window.command = command; //debugging
     console.log('global: command (caret command manager); commandList(filter): list all commands with optional filter');
     //lists commands in console with optional filter
-    window.commandList = function(filter){
+    window.commandList = function(filter) {
         var arr = [];
         for (var i = 0; i < command.list.length; i++) {
             var c = command.list[i];
@@ -2081,11 +2106,8 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         arr.sort();
         console.log(arr.join("\n"));
     };
-    
-    
-    
-    
-  
+
+
     //#endregion
 
 
