@@ -9001,6 +9001,8 @@ var optionsProvider = {
         var opt = this.$options[name];
         if (!opt) {
             if (typeof console != "undefined" && console.warn)
+                //if(console.trace) console.trace();//added by morgan for testing
+                
                 console.warn('misspelled option "' + name + '"');
             return undefined;
         }

@@ -337,6 +337,17 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
             if (!node) return;
             //walk through existing tabs to see if it's already open
             var tabs = sessions.getAllTabs();
+            
+            //HACK: first check open tabs fileName property that does not contain the path because tern uses short name for current file; NOT SURE IF THIS WORKS... NEED TO TEST
+            for (var i = 0; i < tabs.length; i++) {
+                if(tabs[i].fileName == path){
+                    sessions.setCurrent(tabs[i]);
+                    if (callback) callback(tabs[i]);
+                    return;
+                }
+            }
+            
+            
             chrome.fileSystem.getDisplayPath(node.entry, function(path) {
                 //look through the tabs for matching display paths
                 M.map(
@@ -372,21 +383,26 @@ define(["settings!user", "command", "sessions", "storage/file", "util/manos", "u
         /**
          * (Morgan)reads file by path and returns the file data (used for tern to read files for require.js). this is a quick ghetto hack. needs improvment, including updating tern when the reference fiels change
          * @param {fn} callback that accepts (err,data {file data as string}, file {filesystem})
+         * @issue - does not fire callback if it fails to read file
          */
         readFile: function(path, callback) {
-            var self = this;
-            var found = false;
-            var node = this.pathMap[path];
-            if (!node) return;
-            //walk through existing tabs to see if it's already open
-            chrome.fileSystem.getDisplayPath(node.entry, function(path) {
-                var file = new File(node.entry);
-                file.read(function(err, data) {
-                    //console.log('data', data);
-                    //console.log('file', file);
-                    callback(err, data);
+            //console.log('readFile;path=',path);
+            try{
+                var node = this.pathMap[path];
+                if (!node) return;
+                //walk through existing tabs to see if it's already open
+                chrome.fileSystem.getDisplayPath(node.entry, function(displayPath) {
+                    var file = new File(node.entry);
+                    file.read(function(err, data) {
+                        //console.log('data', data);
+                        //console.log('displayPath='+displayPath,'\nfile', file);
+                        callback(err, data);
+                    });
                 });
-            });
+            }
+            catch(ex){
+                callback(ex,'');
+            }
         },
 
         generateProject: function() {

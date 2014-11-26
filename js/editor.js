@@ -43,11 +43,41 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         editor.container.style.fontFamily = userConfig.fontFamily || null;
         editor.setAnimatedScroll(userConfig.animatedScroll || true);
         defaultFontSize();
+        
         //load tern
         ace.config.loadModule('ace/ext/language_tools', function() {
             ace.config.loadModule('ace/ext/tern', function() {
+                var ternOptions = {
+                    defs: ['jquery', 'browser', 'ecma5'],
+                    plugins: {
+                        doc_comment: true,
+                        /*requirejs: {
+                                "baseURL": "./",
+                                "paths": {}
+                            },*/
+                    },
+                    workerScript: ace.config.moduleUrl('worker/tern'),
+                    useWorker: true,
+                    /** use a fake worker for tern server that uses sandbox because chrome app cant use eval outside of sandbox (terns acorn parser uses eval) */
+                    workerClass: function() {
+                        var self = this;
+                        this.sandboxFrame = document.getElementById('sandboxFrame');
+                        this.postMessage = function(message) {
+                            this.sandboxFrame.contentWindow.postMessage(message, '*'); //2nd param allows any origin
+                        };
+                        this.onmessage = null;
+                        this.error = null;
+                        window.addEventListener('message', function(event) {
+                            if (typeof self.onmessage === 'function') {
+                                self.onmessage(event);
+                            }
+                        });
+                    }
+                };
+
+
                 editor.setOptions({
-                    enableTern: userConfig.autocomplete,
+                    enableTern: userConfig.autocomplete ? ternOptions : false,
                     ternLocalStringMinLength: 3,
                     enableSnippets: userConfig.autocomplete,
                     enableBasicAutocompletion: userConfig.autocomplete
@@ -57,20 +87,95 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 //console.log('editor.ternServer.debug("files") \t\t (use to test files when using require)');
                 try {
                     if (editor.ternServer) {
+                        //NOTE: the server must be restarted to change these options
                         //editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
                         //editor.ternServer.options.plugins.angular = true;
-                        //tell it how to get files for requirejs
-                        editor.ternServer.options.getFile = function(name, callback) {
-                            require(["ui/projectManager"], function(projectManager) {
-                                projectManager.readFile(name, function(err, data) {
-                                    callback(err, data);
-                                });
-                            });
+                        
+                        //set options that can be changed at any time without restarting server
+                        
+                        /**
+                         * used by tern to get name of current file
+                         */
+                        editor.ternServer.options.getCurrentFileName= function(callback){
+                             callback(editor.session.fileName);
                         };
+                        
+                        /**
+                         * @returns {string} resolved path
+                         * NOTE: chromes filesystem wants to open files with forward slashes and they must start with the name of the opened project folder
+                         * @param {string} path - path to resolve
+                         */
+                        editor.ternServer.options.resolveFilePath= function(path, callback) {
+                            try {
+                                /**
+                                 * get open project directories, needed to build the correct relative path 
+                                 * (has to guess which directory to use by using string contains... 
+                                 *  could possibly break)
+                                 */
+                                editor.session.file.getPath(function(err, p) {
+                                    var currentPath = p;
+                                    //var currentPath=editor.session.file.entry.fullPath; //this returns /CaretTern/js/ace/ext-tern.js , but doesn't work on first load if retained file...
+                                    ////note: current path is path of currently opened file, example: ~\Desktop\localGit\CaretTern\js\ace\ext-tern.js
+
+                                    var projectDirectories = pm.project.folders; //HACK: pm is global
+                                    //console.log('path=',path,'currentPath=',currentPath);
+
+                                    var pathPart1 = currentPath;
+                                    if (path.toLowerCase().indexOf("http") !== -1) {
+                                        return path;
+                                    }
+                                    path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
+                                    while (path.substr(0, 3) === '..\\') {
+                                        var t1 = pathPart1.substr(0, pathPart1.lastIndexOf("\\"));
+                                        var t2 = t1.substr(0, t1.lastIndexOf("\\"));
+                                        pathPart1 = t2;
+                                        path = path.substring(3);
+                                    }
+                                    var final = pathPart1 + "\\" + path;
+                                    final = final.replace(/\\/g, '/'); //back to forward slashes (ghetto)
+                                    //console.log('\n\nfinal:', final, '\npath=', path, '\ncurrentPath=', currentPath);
+
+                                    //check project directoires to get relative path to project directory
+                                    for (var i = 0; i < projectDirectories.length; i++) {
+                                        var dir = projectDirectories[i].path;
+                                        if (final.indexOf(dir) !== -1) {
+                                            //console.log('found in dir=' + dir);
+                                            final = final.substr(final.indexOf(dir));
+                                            break;
+                                        }
+                                        else {
+                                            //console.log('NOT in dir=' + dir);
+                                        }
+                                    }
+                                    //console.log('final relative to project:', final);
+                                    callback(final);
+                                });
+                            }
+                            catch (ex) {
+                                callback("");
+                                throw ex;
+                            }
+                        };
+
+                        /**
+                         * tell tern how to get a file (requiredJS, jump to def, vs refs, etc..)
+                         * @param {string} name - full file path or relative (will likely be relative)
+                         */
+                        editor.ternServer.options.getFile = function(name, callback) {
+                                require(["ui/projectManager"], function(projectManager) {
+                                    projectManager.readFile(name, function(err, data) {
+                                        if (err) {
+                                            console.log('err reading file ' + name, err);
+                                        }
+                                        callback(err, data);
+                                    });
+                                });
+                        };
+
                         //tell it how to switch to another file
                         editor.ternServer.options.switchToDoc = function(name, start, end) {
                             require(["ui/projectManager"], function(projectManager) {
-                                log('open project file name: ' + name);
+                                console.log('open project file name: ' + name);
                                 projectManager.openFile(name);
                                 //GHETTO: hopefully the file is open by now, so lets jump to the start location (need to update project manager openFile to accept callback when its done to trigger this)
                                 setTimeout(function() {

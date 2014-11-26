@@ -135,8 +135,7 @@ function(require, exports, module) {
 
 
     //#region Tern
-    var TernServer = require("../tern").TernServer;
-    var aceTs = new TernServer({
+    var ternOptions= {
         defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
             doc_comment: true,
@@ -148,9 +147,17 @@ function(require, exports, module) {
         workerScript: ace.config.moduleUrl('worker/tern'),
         useWorker: true,
         switchToDoc: function(name, start) {
-            console.log('COMEBACK. add functionality to siwtch to doc from tern. name=' + name + '; start=' + start);
+            console.log('switchToDoc called but not defined. name=' + name + '; start=' + start);
         }
-    });
+    };
+    
+    var TernServer = require("../tern").TernServer;
+    var aceTs;
+    /** assigns local var aceTs to a new TernServer instance using local var ternOptions */
+    var createTernServer=function(){
+        aceTs = new TernServer(ternOptions);
+    };
+    
     //hack: need a better solution to get the editor variable inside of the editor.getSession().selection.onchangeCursor event as the passed variable is of the selection, not the editor. This variable is being set in the enableTern set Option
     var editor_for_OnCusorChange = null;
 
@@ -185,20 +192,29 @@ function(require, exports, module) {
             }
         }
     };
-
     //minimum string length for tern local string completions. set to -1 to disable this
     var ternLocalStringMinLength = 3;
-
-    console.log('TODO- add method for turning off tern server, should also be automatic on mode change. Make sure to remove the cursorchange event bindings that tern has when its off/disabled');
-    completers.push(aceTs); //add
+    
+    
+    completers.push(aceTs);
     exports.server = aceTs;
 
     var config = require("../config");
     var Editor = require("../editor").Editor;
     config.defineOptions(Editor.prototype, "editor", {
         enableTern: {
+            /**
+             * Turns tern on or off
+             * @param {bool|object} val - true/false or pass an object that contains tern options to set to true and create tern server with passed options
+             * @note - Use this to restart tern with new options by setting to false then true again by passing new options;
+             */
             set: function(val) {
+                if(typeof val === 'object'){
+                    ternOptions = val; //TODO: perhaps merge options with defaults..
+                    val=true;
+                }
                 if (val) {
+                    createTernServer();
                     //set default ternLocalStringMinLength
                     if (this.getOption('ternLocalStringMinLength') === undefined) {
                         this.setOption('ternLocalStringMinLength', ternLocalStringMinLength);
@@ -213,7 +229,7 @@ function(require, exports, module) {
                     aceTs.bindAceKeys(this);
                 }
                 else {
-                    this.ternServer = undefined;
+                    delete this.ternServer;
                     // console.log('disabling on cursor change');
                     this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
@@ -277,6 +293,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {function} [options.getFile] - Provides a way for the server to try and fetch the content of files. Depending on the async option, this is either a function that takes a filename and returns a string (when not async), or a function that takes a filename and a callback, and calls the callback with an optional error as the first argument, and the content string (if no error) as the second.
      * @param {bool} [options.async=false] - Indicates whether getFile is asynchronous
      * @param {int} [options.fetchTimeout=1000] - Indicates the maximum amount of milliseconds to wait for an asynchronous getFile before giving up on it
+     * @param {function} [resolveFilePath] optional function that takes a file path and modifies it as needed then peforms a callback with the result file path
      */
     var TernServer = function(options) {
         var self = this;
@@ -286,8 +303,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             plugins.doc_comment = true;
         }
         if (this.options.useWorker) {
-            //console.log('using workiner');
-            this.server = new WorkerServer(this);
+            this.server = new WorkerServer(this, this.options.workerClass);
         }
         else {
             //  logO(plugins, 'plugins in new tern server');
@@ -382,7 +398,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
     };
     /** @type {bool} set to true log info about completions */
-    var debugCompletions=false;
+    var debugCompletions = false;
 
     //#endregion
 
@@ -399,7 +415,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * @param {string} doc = contents of the file OR the entire ace editor? (in code mirror it adds the CodeMirror.Doc, which is basically the whole editor)
          */
         addDoc: function(name, doc) {
-            //logO(doc, 'addDoc.doc');
             var data = {
                 doc: doc,
                 name: name,
@@ -440,11 +455,22 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             if (found && found.changed) sendDoc(this, found);
         },
         /**
-         ** Refreshes current document on tern server (forces send, useful for debugging as ideally this should not be needed)
+         * Refreshes current document on tern server (forces send, useful for debugging as ideally this should not be needed)
          */
         refreshDoc: function(editor) {
             var doc = findDoc(this, editor);
             sendDoc(this, doc);
+            
+            //delete all docs other than current and reload refs (HACK- this should be handled in a better way and need to figure out how it works with requireJS and how it works when all open documentes may be added to server?)
+            /* added this 11.25.2014 but it broke other things with the current doc... needs more work as the below algorithm is not correct
+            for (var p in this.docs) {
+                if(p !== doc){
+                  this.delDoc(p);  
+                } 
+            }
+            loadExplicitVsRefs(this, editor);*/
+         
+            //tooltip
             var el = document.createElement('span');
             el.setAttribute('style', 'color:green;');
             el.innerHTML = "Tern document refreshed";
@@ -529,15 +555,35 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * (ghetto and temporary). Call this when current doc changes, it will delete all docs on the server then add current doc
          */
         docChanged: function(editor) {
+            var sf = this;
+            
             //delete all docs
             for (var p in this.docs) {
                 this.delDoc(p);
             }
-            //add current doc
-            this.addDoc("current", editor);
-            console.log('checking for VS refs because Doc changed... DISABLE when done with adding correct editorSession interface');
-            loadTernRefs(this, editor);
+            
+            var finish=function(name){
+                sf.addDoc(name, editor);//add current doc
+                
+                //console.log('checking for VS refs because Doc changed... DISABLE when done with adding correct editorSession interface');
+                loadExplicitVsRefs(sf, editor);
+            };
+            
+            if(this.options.getCurrentFileName){
+                this.options.getCurrentFileName(finish);
+            }
+            else{
+                finish('current');//name the file current
+            }
         },
+        /**
+         * @returns {string} current file name using options.getCurrentFileName or 'current''
+         */
+        /*getCurrentFileName: function(){
+            if(this.options.getCurrentFileName){
+                this.options.getCurrentFileName(finish);
+            }
+        },*/
         /**
          * (ghetto) (for web worker only) needed to update plugins and options- tells web worker to kill current tern server and start over as options and plugins can only be set during initialization
          * Need to call this after changing any plugins
@@ -558,7 +604,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             this.server.sendDebug(message);
         },
         /** @param {bool} value - set to true to log debug info about get completions */
-        debugCompletions: function(value){
+        debugCompletions: function(value) {
             if (value) debugCompletions = true;
             else debugCompletions = false;
         },
@@ -571,6 +617,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region TernServerPrivate
 
+    /**
+     * Resolves file path if options.resolveFilePath function is set;
+     * This is needed for ChromeApp as relative paths are weight with the Chrome file system api;
+     * @param {function} cb - callback(resolvedName); will be executed with passed name if resolveFilePath option is not passed
+     */
+    function resolveFilePath(ts,name,cb){
+        if(ts.options.resolveFilePath){
+            ts.options.resolveFilePath(name,cb);
+        }
+        else{
+            cb(name);//return original name
+        }
+    }
     /**
      * gets file (called by requirejs plugin and possibly other places)
      */
@@ -807,15 +866,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             return false;
         };
         var forceEnableAceTextCompletor = autoCompleteFiredTwiceInThreshold();
-        if(!forceEnableAceTextCompletor){
+        if (!forceEnableAceTextCompletor) {
             var t = getCurrentToken(editor);
-            if(t && t.type && t.type.indexOf('comment') !== -1) forceEnableAceTextCompletor=true;
+            if (t && t.type && t.type.indexOf('comment') !== -1) forceEnableAceTextCompletor = true;
             //get all completions if user currently typing in a comment
         }
 
-        var groupName='';
+        var groupName = '';
         if (debugCompletions) {
-            groupName=Math.random().toString(36).slice(2);
+            groupName = Math.random().toString(36).slice(2);
             console.group(groupName);
             console.time('get completions from tern server');
         }
@@ -855,7 +914,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
             //#region OtherCompletions
             if (debugCompletions) console.time('get and merge other completions');
-            
+
             var otherCompletions = [];
             //if basic auto completion is on, then get keyword completions that are not found in tern results
             if (editor.getOption('enableBasicAutocompletion') === true) {
@@ -866,8 +925,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //TODO: this throws error when using tern in script tags in mixed html mode- need to fix this(not critical, but missing keyword completions when using html mixed)
                 }
             }
-            
-            
+
+
             if ((forceEnableAceTextCompletor || ternCompletions.length === 0) && ts.aceTextCompletor) {
                 if (debugCompletions) console.time('aceTextCompletor');
                 var textCompletions = [];
@@ -976,15 +1035,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 ternCompletions = mergedCompletions.slice();
             }
-            if (debugCompletions)  console.timeEnd('get and merge other completions');
+            if (debugCompletions) console.timeEnd('get and merge other completions');
             //#endregion
 
 
             //callback goes to the lang tools completor
             callback(null, ternCompletions);
-            
-            if(debugCompletions) console.groupEnd(groupName);
-            
+
+            if (debugCompletions) console.groupEnd(groupName);
+
 
             var tooltip = null;
             //COMEBACK: also need to bind popup close and update (update likely means when the tooltip has to move) (and hoever over items should move tooltip)
@@ -1048,7 +1107,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 return;
             }
         }
-    
+
         /**
          * handles result of request
          * @param {object} data - result of request (can be either a 'type' or 'definition' request)
@@ -1076,10 +1135,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         return;
                     }
                 }
-            
+
                 if (data.hasOwnProperty('type')) { //type query (first try)
                     if (data.type == "?") {
-                        tip = tempTooltip(editor, elFromString('<span>?</span>'),1000);
+                        tip = tempTooltip(editor, elFromString('<span>?</span>'), 1000);
                         return;
                     }
                     if (data.type.toString().length > 1 && data.type.toString().substr(0, 2) !== 'fn') {
@@ -1091,7 +1150,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         return;
                     }
                 }
-                else{ //data is a definition request
+                else { //data is a definition request
                     if (typeData && typeData.hasOwnProperty('type')) {
                         //typeData passed from prior callback, merge data to get most complete results for tooltip
                         data.type = typeData.type;
@@ -1101,7 +1160,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
             tip = createInfoDataTip(data, true);
-    
+
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
             setTimeout(function() {
                 var place = getCusorPosForTooltip(editor);
@@ -1110,7 +1169,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
         };
-    
+
         ts.request(editor, "type", cb, pos, !calledFromCursorActivity, (calledFromCursorActivity ? 100 : null));
     }
     /**
@@ -1125,17 +1184,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {bool} [includeType=false] - pass true to include object type (which is small bold part at top of tip), will only be included if jsDoc params could not be parsed
      * @param {int} [activeArg] pass posistion of active argument if in arg hints (fist arg is 0)
      */
-    function createInfoDataTip(data, includeType, activeArg){
+    function createInfoDataTip(data, includeType, activeArg) {
         //log('data', data, 'includeType', includeType, 'parseFnType(data.type)', parseFnType(data.type));
         //TODO: add links in tooltip: jumpto, find refs
         tip = elt("span", null);
-    
+
         var d = data.doc;
-        var params =data.params ||  parseJsDocParams(d); //parse params
-    
+        var params = data.params || parseJsDocParams(d); //parse params
+
         if (includeType) {
             var fnArgs = data.fnArgs ? data.fnArgs : data.type ? parseFnType(data.type) : null; //will be null if parseFnType detects that this is not a function
-           if (fnArgs) {
+            if (fnArgs) {
                 /**
                  * gets param info from comments or tern (prefers comments), returns null or empty array if not found (empty array if getChildren=true)
                  * @param {object} arg - name and type
@@ -1182,8 +1241,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 typeStr += "(";
                 var activeParam = null,
                     activeParamChildren = []; //one ore more child params for multiple object properties
-                    
-                
+
+
                 for (var i = 0; i < fnArgs.args.length; i++) {
                     var paramStr = '';
                     var isCurrent = !isNaN(parseInt(activeArg)) ? i === activeArg : false;
@@ -1232,8 +1291,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     if (i > 0) paramStr = ', ' + paramStr;
                     typeStr += paramStr;
                 }
-                
-                
+
+
                 typeStr += ")";
                 if (fnArgs.rettype) {
                     if (useDetailedArgHints) {
@@ -1244,9 +1303,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
                 typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
-        
+
                 //if this is for arg hints, then show parameter details only for active param
-                if(useDetailedArgHints){
+                if (useDetailedArgHints) {
                     if (activeParam && activeParam.description) {
                         typeStr += '<div class="' + cls + 'farg-current-description"><span class="' + cls + 'farg-current-name">' + activeParam.name + ': </span>' + activeParam.description + '</div>';
                     }
@@ -1261,11 +1320,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 tip.appendChild(elFromString(typeStr));
             }
         }
-        if(isNaN(parseInt(activeArg))){
+        if (isNaN(parseInt(activeArg))) {
             if (data.doc) {
-        
+
                 //#region Parse Comments
-        
+
                 /**
                  * Replaces param tags and their type, name, description with formatted html;
                  * This is not fullproof (made very quickly)
@@ -1276,7 +1335,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     if (params.length === 0) {
                         return str;
                     }
-        
+
                     //#region strip params from input
                     str = str.replace(/@param/gi, '@param'); //make sure all param tags are lowercase
                     var beforeParams = str.substr(0, str.indexOf('@param'));
@@ -1291,9 +1350,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         str = ''; //@param was likely the last tag, trim remaining as its likely the end of a param description
                     }
                     //#endregion
-        
+
                     //#region append formatted params to description that is stripped of params
-                    var paramStr='';
+                    var paramStr = '';
                     for (var i = 0; i < params.length; i++) {
                         paramStr += '<div>';
                         if (params[i].parentName.trim() === '') {
@@ -1303,7 +1362,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             paramStr += '<span class="' + cls + 'jsdoc-tag-param-child">&nbsp;</span> '; //dont show param tag for child param
                         }
                         paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
-                    
+
                         if (params[i].name.trim() !== '') {
                             var name = params[i].name.trim();
                             if (params[i].parentName.trim() !== '') {
@@ -1321,11 +1380,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         paramStr += params[i].description.trim() === '' ? '' : ' - <span class="' + cls + 'jsdoc-param-description">' + params[i].description + '</span>';
                         paramStr += '</div>';
                     }
-                    if(paramStr !== ''){
-                        str+= '<div class="'+cls+'jsdoc-param-wrapper">'+paramStr+'</div>';
+                    if (paramStr !== '') {
+                        str += '<div class="' + cls + 'jsdoc-param-wrapper">' + paramStr + '</div>';
                     }
                     //#endregion
-        
+
                     return beforeParams + str;
                 };
                 /**
@@ -1333,7 +1392,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                  */
                 var highlighTags = function(str) {
                     try {
-                        str = ' ' +str +' ';//add white space for regex
+                        str = ' ' + str + ' '; //add white space for regex
                         var re = /\s@\w{1,50}\s/gi;
                         var m;
                         //NOTE: regex matches with white space on each side, in replacment below we get rid of white space using trim, this is critical or we will create an infinte loop
@@ -1345,7 +1404,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         }
                         str = str.trim();
                         //if there are no characters before first tag, then remove first line break
-                        if(str.length> 5 && str.substr(0,5) === '<br/>'){
+                        if (str.length > 5 && str.substr(0, 5) === '<br/>') {
                             str = str.substr(5);
                         }
                     }
@@ -1358,7 +1417,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                  * @returns {string} with jsdoc types (inside of curly brackets) highlighted via html
                  */
                 var highlightTypes = function(str) {
-                    str = ' ' +str +' ';//add white space for regex
+                    str = ' ' + str + ' '; //add white space for regex
                     try {
                         var re = /\s{[^}]{1,50}}\s/g;
                         var m;
@@ -1379,8 +1438,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                  * @returns {string} with urls turned into html links;
                  * @param {str} string that has already been html encoded
                  */
-                var createLinks = function(str){
-                    try{
+                var createLinks = function(str) {
+                    try {
                         //place holders for replacing each match to ensure they no longer match, which will then get replaced again at end of function
                         var httpProto = 'HTTP_PROTO_PLACEHOLDER';
                         var httpsProto = 'HTTPS_PROTO_PLACEHOLDER';
@@ -1392,18 +1451,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             }
                             var withoutProtocol = m[0].replace(/https/i, httpsProto).replace(/http/i, httpProto);
                             var text = m[0].replace(new RegExp('https://', 'i'), '').replace(new RegExp('http://', 'i'), '');
-                            str = str.replace(m[0], '<a class="'+cls+'tooltip-link" href="' + withoutProtocol + '" target="_blank">' + text + ' </a>');
+                            str = str.replace(m[0], '<a class="' + cls + 'tooltip-link" href="' + withoutProtocol + '" target="_blank">' + text + ' </a>');
                         }
                         //now replace protocol place holders with protocol
-                        str = str.replace(new RegExp(httpsProto,'gi'),'https').replace(new RegExp(httpProto,'gi'),'http');
+                        str = str.replace(new RegExp(httpsProto, 'gi'), 'https').replace(new RegExp(httpProto, 'gi'), 'http');
                     }
-                    catch(ex){
-                        showError(ts,editor,ex);
+                    catch (ex) {
+                        showError(ts, editor, ex);
                     }
                     return str;
                 };
-        
-        
+
+
                 if (d.substr(0, 1) === '*') {
                     d = d.substr(1); //tern leaves this for jsDoc as they start with /**, not exactly sure why...
                 }
@@ -1435,25 +1494,25 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * Parses jsDoc parameters from function comments
      * @returns {array(name,type,description,optional,defaultValue)}
      */
-    function parseJsDocParams(str){
+    function parseJsDocParams(str) {
         if (!str) return [];
         str = str.replace(/@param/gi, '@param'); //make sure all param tags are lowercase
         var params = [];
         while (str.indexOf('@param') !== -1) {
             str = str.substring(str.indexOf('@param') + 6); //starting after first param match
             var nextTagStart = str.indexOf('@'); //split on next param (will break if @symbol inside of param, like a link... dont have to time fullproof right now)
-    
+
             var paramStr = nextTagStart === -1 ? str : str.substr(0, nextTagStart);
             var thisParam = {
                 name: "",
                 //if there is more than one param tag descibing an object with multiple properties, this will be name of parent object; http://stackoverflow.com/questions/6460604/how-to-describe-object-arguments-in-jsdoc/6460748#6460748
-                parentName:"",
+                parentName: "",
                 type: "",
                 description: "",
                 optional: false,
                 defaultValue: ""
             };
-    
+
             //#region extract type type if any
             var re = /\s{[^}]{1,50}}\s/;
             var m;
@@ -1466,7 +1525,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 thisParam.type = thisParam.type.replace('{', '').replace('}', '').replace(' ', '').trim(); //remove brackets and spaces
             }
             //#endregion
-    
+
             //#region parseName
             paramStr = paramStr.trim(); //we now have a single param string starting after the type, next string should be the parameter name
             if (paramStr.substr(0, 1) === '[') {
@@ -1500,26 +1559,26 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     thisParam.name = paramStr.substr(0, nextSpace);
                     paramStr = paramStr.substr(nextSpace).trim(); //remove name portion from param str
                 }
-                else{//no more spaces left, next portion of string must be name and there is no description
+                else { //no more spaces left, next portion of string must be name and there is no description
                     thisParam.name = paramStr;
-                    paramStr='';
+                    paramStr = '';
                 }
             }
             var nameDotIdx = thisParam.name.indexOf('.');
-            if(nameDotIdx !==-1){
+            if (nameDotIdx !== -1) {
                 //NOTE: currently only supporting a single dot for parent name
-                thisParam.parentName = thisParam.name.substring(0,nameDotIdx);
-                thisParam.name = thisParam.name.substring(nameDotIdx+1);
+                thisParam.parentName = thisParam.name.substring(0, nameDotIdx);
+                thisParam.name = thisParam.name.substring(nameDotIdx + 1);
             }
             //#endregion
-    
+
             //#region parseDescription
             paramStr = paramStr.trim();
             if (paramStr.length > 0) {
                 thisParam.description = paramStr.replace('-', '').trim(); //optional hiphen specified before start of description
             }
             //#endregion
-            
+
             //escape html
             thisParam.name = htmlEncode(thisParam.name);
             thisParam.parentName = htmlEncode(thisParam.parentName);
@@ -1572,12 +1631,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             totalRefs.innerHTML = data.refs.length + " References Found";
             header.appendChild(totalRefs);
 
-            var doc = findDoc(ts, editor); //get current doc ref
-
             //create select input for showing refs
             var refInput = document.createElement("select");
             refInput.setAttribute("multiple", "multiple");
             refInput.addEventListener("change", function() {
+                var doc = findDoc(ts, editor); //get current doc in editor
                 var el = this,
                     selected;
                 for (var i = 0; i < el.options.length; i++) {
@@ -1611,6 +1669,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     //disable this as there is no way to know for sure when the thing is done scrolling
                     editor.setAnimatedScroll(false);
                 }
+                //console.log('file='+file,'\ndoc',doc,'\ntargetDoc',targetDoc);// THIS IS NOT WORKING!
+                
                 moveTo(ts, doc, targetDoc, start, null, true);
                 //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
                 setTimeout(function() {
@@ -1841,7 +1901,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     //#region ArgHints
 
 
-   /**
+    /**
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
      * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      * @returns {undefined | (argpos,start(ch,line))} call pos object or undefined if not in call pos
@@ -1851,7 +1911,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     function getCallPos(editor, pos) {
         if (somethingIsSelected(editor)) return;
         if (!inJavascriptMode(editor)) return;
-        
+
         //#region setup
         var start = {}; //start of query to tern (start of the call location)
         var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
@@ -1866,15 +1926,15 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         //array of posistions where commas lie that could potentialy increment arg pos
         var commas = [];
         //#endregion
-        
-        
+
+
         //#region iterate backwards through each row
         for (var row = currentLine; row >= firstLineToCheck; row--) {
             var thisRow = editor.session.getLine(row);
             if (row === currentLine) {
                 thisRow = thisRow.substr(0, currentCol);
-            } 
-            
+            }
+
             //#region for current line, only get up to cursor posistion
             for (var col = thisRow.length; col >= 0; col--) {
                 ch = thisRow.substr(col, 1);
@@ -1909,27 +1969,30 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
                 else if (ch === ',' && depth === 0) {
-                    commas.push({line:row, ch:col});
+                    commas.push({
+                        line: row,
+                        ch: col
+                    });
                 }
             }
             //#endregion
-            
+
         }
         //#endregion
-        
+
         if (!start.hasOwnProperty('line')) { //start not found
             return;
         }
-        
+
         //get argument posistion inside of call by adding one for each comma that occurs after start pos
-        var argpos=0;
+        var argpos = 0;
         for (var i = 0; i < commas.length; i++) {
-            var p=commas[i];
-            if(p.line >= start.line && p.ch > start.ch){
+            var p = commas[i];
+            if (p.line >= start.line && p.ch > start.ch) {
                 argpos += 1;
             }
         }
-        
+
         return {
             start: toTernLoc(start),
             "argpos": argpos
@@ -2001,7 +2064,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var cache = ts.cachedArgHints,
             tp = cache.type,
             comments = cache.comments; //added by morgan to include document comments
-    
+
         //parse comments to use for type!
         if (!cache.hasOwnProperty('params')) {
             if (!cache.comments) {
@@ -2017,7 +2080,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
         }
-    
+
         var place = getCusorPosForTooltip(editor);
         var data = {
             name: cache.name,
@@ -2035,9 +2098,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @returns {null | (args:array(name,type), rettype)} null if failed to parse
      */
     function parseFnType(text) {
-        if (text.substring(0, 2) !== 'fn') return null;//not a function
+        if (text.substring(0, 2) !== 'fn') return null; //not a function
         if (text.indexOf('(') === -1) return null;
-        
+
         var args = [],
             pos = 3;
 
@@ -2080,7 +2143,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
 
     //#region tooltips
-    
+
     /**
      * @returns {string} html escaped string
      */
@@ -2091,7 +2154,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             ">": "&gt;",
         };
         return String(string).replace(/[&<>]/g, function(s) {
-            if(!s) return '';
+            if (!s) return '';
             return entityMap[s];
         });
     }
@@ -2597,40 +2660,101 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }, 200);
         }
     }
+    /**
+     * @hack - this should be a tern extension but I don't have time to do that right now
+     * Checks for explicit script references for current doc using Visual Studio syntax  {http://blogs.msdn.com/b/webdev/archive/2007/11/06/jscript-intellisense-a-reference-for-the-reference-tag.aspx}
+     * and adds the references to tern for intellisense
+     * 
+     */
+    function loadExplicitVsRefs(ts, editor) {
+        if (!editor.ternServer || !editor.ternServer.enabledAtCurrentLocation(editor)) {
+            //console.log('tern not enabled at current location, not adding vs refs');
+            return;
+        }
+        var StringtoCheck = "";
+        for (var i = 0; i < editor.session.getLength(); i++) {
+            var thisLine = editor.session.getLine(i);
+            if (thisLine.substr(0, 3) === "///") {
+                StringtoCheck += "\n" + thisLine;
+            }
+            else {
+                break; //only top lines may be references
+            }
+        }
+        if (StringtoCheck === '') {
+            //console.log('no refs found for file, exiting');
+            return;
+        }
+
+        var re = /(?!\/\/\/\s*?<reference path=")[^"]*/g;
+        var m;
+        var refs = [];
+        while ((m = re.exec(StringtoCheck)) != null) {
+            if (m.index === re.lastIndex) {
+                re.lastIndex++;
+            }
+            var r = m[0].replace('"', '');
+            if (r.toLowerCase().indexOf('reference path') === -1 && r.trim() !== '' && r.toLowerCase().indexOf('/>') === -1) {
+                if (r.toLowerCase().indexOf('vsdoc') === -1) { //dont load vs doc files as they are visual studio xml junk
+                    refs.push(r);
+                }
+            }
+        }
+       
+        //reads file and adds to tern
+        var ReadFile_AddToTern = function(path) {
+            try {
+                //console.log('add ref. name=' + name + '; path=' + path);
+                if (path.toLowerCase().indexOf("http") !== -1) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("get", path, true);
+                    xhr.send();
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState == 4) {
+                            console.log('adding web reference: ' + path);
+                            // alert('adding web reference: ' + path);
+                            editor.ternServer.addDoc(path.replace(/^.*[\\\/]/, ''), xhr.responseText);
+                        }
+                    };
+                }
+                else { //local
+                    resolveFilePath(ts, path, function(resolvedPath) {
+                        getFile(ts, resolvedPath, function(err, data) {
+                            if (err || !data) {
+                                console.log('error getting file: ' + resolvedPath, err);
+                            }
+                            else {
+                                ts.addDoc(resolvedPath, data.toString());
+                                console.log('adding reference: ' + resolvedPath);
+                            }
+                        });
+                    });
+                }
+            }
+            catch (ex) {
+                console.log('add to tern error; path=' + path);
+                throw ex;
+            }
+        };
+
+        for (var i = 0; i < refs.length; i++) {
+            var thisPath = refs[i];
+            //thisPath = ResolvePath(thisPath, currentPath, pm.project.folders);
+            //console.log('resolved path: ' + thisPath +'\n original: '+ refs[i]+'\t\t current: '+currentPath);
+            ReadFile_AddToTern(thisPath);
+        }
+    }
 
     //#endregion
 
 
     //#region WorkerWrapper
-    // Worker wrapper
-    function WorkerServer(ts) {
-        //#region FakeWorker
-        //fake web worker that communicates with sandbox instead of web worker
-        function fakeWorker() {
-            /* doesn't appear to be needed
-                document.addEventListener('DOMContentLoaded', function () {
-                document.getElementById('sandboxFrame').onload = function () {
-                    window.sandboxLoaded = true;
-                };
-            });*/
-            var self = this;
-            this.sandboxFrame = document.getElementById('sandboxFrame');
-            this.postMessage = function(message) {
-                this.sandboxFrame.contentWindow.postMessage(message, '*'); //2nd param allows any origin
-            }
-            this.onmessage = null;
-            this.error = null;
-            window.addEventListener('message', function(event) {
-                if (typeof self.onmessage === 'function') {
-                    self.onmessage(event);
-                }
-            });
-        }
-        //#endregion
-
-        //var worker = new Worker(ts.options.workerScript);
-        var worker = new fakeWorker();
-
+    /**
+     * Worker Wrapper
+     * @param {function} [workerClass=Worker] - (hack) allows using a custom 'worker', used by Chrome extension to create a fake worker
+     */
+    function WorkerServer(ts, workerClass) {
+        var worker = workerClass? new workerClass() :  new Worker(ts.options.workerScript);
         /**
          * Starts worker server (or can be used to restart with new plugins/options)
          */
@@ -2726,143 +2850,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
     //#region CSS
     var dom = require("ace/lib/dom");
-    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; text-decoration:underline; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:grey; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} ");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; /*for close button*/ font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 40em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; /*BYM*/ line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; text-decoration:underline; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:black; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} ");
     //override the autocomplete width (ghetto)-- need to make this an option
     dom.importCssString(".ace_autocomplete {width: 400px !important;}");
     //FOR CARET ONLY-- override css above as carets default font size is stupid small
-    dom.importCssString(".Ace-Tern-tooltip {font-size:120%;}");
     //#endregion
 
-
-    //#region GetVisualStudioRefs
-
-    //this is total ghetto and temporary, and not meant to part of the tern extension
-    function loadTernRefs(ts, editor) {
-        if (!editor.ternServer || !editor.ternServer.enabledAtCurrentLocation(editor)) {
-            console.log('tern not enabled at current location, not adding vs refs');
-            return;
-        }
-        var StringtoCheck = "";
-        for (var i = 0; i < editor.session.getLength(); i++) {
-            var thisLine = editor.session.getLine(i);
-            if (thisLine.substr(0, 3) === "///") {
-                StringtoCheck += "\n" + thisLine;
-            }
-            else {
-                break; //only top lines may be references
-            }
-        }
-        if (StringtoCheck === '') {
-            //console.log('no refs found for file, exiting');
-            return;
-        }
-        //console.log('refs string=' + StringtoCheck);
-
-        var re = /(?!\/\/\/\s*?<reference path=")[^"]*/g;
-        var m;
-        var refs = [];
-        while ((m = re.exec(StringtoCheck)) != null) {
-            if (m.index === re.lastIndex) {
-                re.lastIndex++;
-            }
-            var r = m[0].replace('"', '');
-            if (r.toLowerCase().indexOf('reference path') === -1 && r.trim() !== '' && r.toLowerCase().indexOf('/>') === -1) {
-                if (r.toLowerCase().indexOf('vsdoc') === -1) { //dont load vs doc files as they are visual studio xml junk
-                    refs.push(r);
-                }
-            }
-        }
-
-        //resolves path if needed (if relative)
-        //NOTE: chromes filesystem wants to open files with forward slashes and they must start with the name of the opened project folder
-        var ResolvePath = function(path, currentPath, projectDirectories) {
-            try {
-                //console.log('path=',path,'currentPath=',currentPath);
-                var pathPart1 = currentPath;
-                if (path.toLowerCase().indexOf("http") !== -1) {
-                    return path;
-                }
-                path = path.replace(new RegExp('/', 'g'), '\\'); //forward to back slashes
-                while (path.substr(0, 3) === '..\\') {
-                    var t1 = pathPart1.substr(0, pathPart1.lastIndexOf("\\"));
-                    var t2 = t1.substr(0, t1.lastIndexOf("\\"));
-                    pathPart1 = t2;
-                    path = path.substring(3);
-                }
-                var final = pathPart1 + "\\" + path;
-                final = final.replace(/\\/g, '/'); //back to forward slashes (ghetto)
-                // console.log('final:', final);
-
-                //check project directoires to get relative path to project directory
-                for (var i = 0; i < projectDirectories.length; i++) {
-                    var dir = projectDirectories[i].path;
-                    if (final.indexOf(dir) !== -1) {
-                        //console.log('found in dir=' + dir);
-                        final = final.substr(final.indexOf(dir));
-                        break;
-                    }
-                    else {
-                        //console.log('NOT in dir=' + dir);
-                    }
-                }
-                // console.log('final relative to project:', final);
-                return final;
-            }
-            catch (ex) {
-                log('ERROR', ex);
-            }
-            return "";
-        };
-
-        //reads file and adds to tern
-        var ReadFile_AddToTern = function(path) {
-            try {
-                //console.log('add ref. name=' + name + '; path=' + path);
-                if (path.toLowerCase().indexOf("http") !== -1) {
-                    var xhr = new XMLHttpRequest();
-                    xhr.open("get", path, true);
-                    xhr.send();
-                    xhr.onreadystatechange = function() {
-                        if (xhr.readyState == 4) {
-                            console.log('adding web reference: ' + path);
-                            // alert('adding web reference: ' + path);
-                            editor.ternServer.addDoc(path.replace(/^.*[\\\/]/, ''), xhr.responseText);
-                        }
-                    };
-                }
-                else { //local
-                    getFile(ts, path, function(err, data) {
-                        if (err) {
-                            log('error getting file: ' + path, err);
-                        }
-                        else {
-                            //log('get file data', data);
-                            editor.ternServer.addDoc(path, data.toString());
-                            //alert('adding reference: '+ path);
-                            console.log('adding reference: ' + path);
-                        }
-                    });
-                }
-            }
-            catch (ex) {
-                log('add to tern error', ex);
-            }
-        };
-        //get open project directories, needed to build the correct relative path (has to guess which directory to use by using string contains... could possibly break)
-
-
-        editor.session.file.getPath(function(err, p) {
-            var currentPath = p;
-            //log('refs', refs);
-            //var currentPath=editor.session.file.entry.fullPath; //this returns /CaretTern/js/ace/ext-tern.js , but doesn't work on first load if retained file...
-            ////note: current path is path of currently opened file, example: ~\Desktop\localGit\CaretTern\js\ace\ext-tern.js
-            for (var i = 0; i < refs.length; i++) {
-                var thisPath = refs[i];
-                thisPath = ResolvePath(thisPath, currentPath, pm.project.folders);
-                //console.log('resolved path: ' + thisPath +'\n original: '+ refs[i]+'\t\t current: '+currentPath);
-                ReadFile_AddToTern(thisPath);
-            }
-        });
-    }
-    //#endregion
 });
