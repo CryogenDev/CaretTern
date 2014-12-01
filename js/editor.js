@@ -50,7 +50,6 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 var ternOptions = {
                     defs: ['jquery', 'browser', 'ecma5'],
                     plugins: {
-                        doc_comment: true,
                         /*requirejs: {
                                 "baseURL": "./",
                                 "paths": {}

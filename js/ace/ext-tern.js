@@ -300,7 +300,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         this.options = options || {};
         var plugins = this.options.plugins || (this.options.plugins = {});
         if (!plugins.doc_comment) {
-            plugins.doc_comment = true;
+            plugins.doc_comment = {
+                fullDocs: true
+            };
         }
         if (this.options.useWorker) {
             this.server = new WorkerServer(this, this.options.workerClass);
