@@ -183,6 +183,19 @@ snippet cll\n\
 	console.log('${1}',${1});\n\
 \n\
 \n\
+snippet prop (defineProperty)\n\
+	/** @type {}  */\n\
+	var ${1} = '';\n\
+	Object.defineProperty(this,'${1}', {\n\
+		get: function() {\n\
+			return ${1};\n\
+		},\n\
+		set: function(v) {\n\
+			${1}=v;\n\
+		}\n\
+	});\n\
+\n\
+\n\
 #modules\n\
 snippet def\n\
 	ace.define(function(require, exports, module) {\n\

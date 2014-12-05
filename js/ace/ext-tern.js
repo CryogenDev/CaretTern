@@ -467,8 +467,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             /* added this 11.25.2014 but it broke other things with the current doc... needs more work as the below algorithm is not correct
             for (var p in this.docs) {
                 if(p !== doc){
-                  this.delDoc(p);  
-                } 
+                  this.delDoc(p);
+                }
             }
             loadExplicitVsRefs(this, editor);*/
          
@@ -1096,7 +1096,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     /**
      * shows type/definition of object at current cursor location via tooltip
      * @param {bool} calledFromCursorActivity - TODO: add binding on cursor activity to call this method with this param=true to auto show type for functions only;
-     * 
+     *
      * @note: this first performs a 'type' request, and if the result of the type request is not a function, (meaning its a native type like number,date, etc...) then this will do another request for 'definition' that includes the comments for the object. The second request will be appended to the first request to give us both the type and definition information
      */
     function showType(ts, editor, pos, calledFromCursorActivity) {
@@ -1114,7 +1114,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          * handles result of request
          * @param {object} data - result of request (can be either a 'type' or 'definition' request)
          * @param {object} typeData - result of request 'type' request prior to to this request (if 2nd request, then this is a data request)
-         * 
+         *
          * @note a type request data is: {doc,[origin(only for fn)],exprName,name,type,url} - the doc/url here are uesless for non function types as they are for native javascript types
          * @note a definition request data is: {doc,origin,context,contextOffset,start,end,file}
          */
@@ -1907,7 +1907,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * gets a call posistion {start: {line,ch}, argpos: number} if editor's cursor location is currently in a function call, otherwise returns undefined
      * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
      * @returns {undefined | (argpos,start(ch,line))} call pos object or undefined if not in call pos
-     * 
+     *
      * @note: takes about .01ms to complete on machine with Intel core i3 @ 2.6ghz in Chrome for windows 8
      */
     function getCallPos(editor, pos) {
@@ -2666,7 +2666,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @hack - this should be a tern extension but I don't have time to do that right now
      * Checks for explicit script references for current doc using Visual Studio syntax  {http://blogs.msdn.com/b/webdev/archive/2007/11/06/jscript-intellisense-a-reference-for-the-reference-tag.aspx}
      * and adds the references to tern for intellisense
-     * 
+     *
      */
     function loadExplicitVsRefs(ts, editor) {
         if (!editor.ternServer || !editor.ternServer.enabledAtCurrentLocation(editor)) {
