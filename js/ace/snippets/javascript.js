@@ -183,19 +183,6 @@ snippet cll\n\
 	console.log('${1}',${1});\n\
 \n\
 \n\
-snippet prop (defineProperty)\n\
-	/** @type {}  */\n\
-	var ${1} = '';\n\
-	Object.defineProperty(this,'${1}', {\n\
-		get: function() {\n\
-			return ${1};\n\
-		},\n\
-		set: function(v) {\n\
-			${1}=v;\n\
-		}\n\
-	});\n\
-\n\
-\n\
 #modules\n\
 snippet def\n\
 	ace.define(function(require, exports, module) {\n\
@@ -212,6 +199,35 @@ snippet requ\n\
 guard ^\\s*\n\
 	var ${1/.*\\/(.)/\\u$1/} = require(\"${1}\").${1/.*\\/(.)/\\u$1/};\n\
 	$0\n\
+\n\
+\n\
+snippet prop (defineProperty)\n\
+	/** @type {}  */\n\
+	var ${1} = '';\n\
+	Object.defineProperty(this,'${1}', {\n\
+		get: function() {\n\
+			return ${1};\n\
+		},\n\
+		set: function(v) {\n\
+			${1}=v;\n\
+		}\n\
+	});\n\
+\n\
+\n\
+snippet approp (ap Property)\n\
+	/** @type {}  */\n\
+	this.${1} = function(v) {\n\
+		return this.gc('${1}', '', v,\n\
+		/** get */\n\
+		function(v) {\n\
+			return v;\n\
+		},\n\
+		/** set */\n\
+		function(v) {\n\
+			return v;\n\
+		});\n\
+	};\n\
+\n\
 ";
 exports.scope = "javascript";
 
