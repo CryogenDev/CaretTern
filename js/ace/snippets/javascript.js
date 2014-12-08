@@ -108,7 +108,7 @@ snippet /**\n\
 	 */\n\
 snippet @par\n\
 regex /^\\s*\\*\\s*/@(para?m?)?/\n\
-	@param {${1:type}} ${2:name} ${3:description}\n\
+	@param {${1:type}} ${2:name} - ${3:description}\n\
 snippet @ret\n\
 	@return {${1:type}} ${2:description}\n\
 # JSON.parse\n\
