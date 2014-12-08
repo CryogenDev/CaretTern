@@ -1402,9 +1402,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                             if (m.index === re.lastIndex) {
                                 re.lastIndex++;
                             }
-                            str = str.replace(m[0], '<span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span>&nbsp;');
+                            str = str.replace(m[0], ' <span class="' + cls + 'jsdoc-tag">' + m[0].trim() + '</span> ');
                         }
-                        str = str.trim();
+                        //str = str.trim();
                     }
                     catch (ex) {
                         showError(ts, editor, ex);
