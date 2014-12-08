@@ -215,15 +215,15 @@ snippet prop (defineProperty)\n\
 \n\
 \n\
 snippet approp (ap Property)\n\
-	/** @type {}  */\n\
-	this.${1} = function(v) {\n\
-		return this.gc('${1}', '', v,\n\
+	/** (approp) @type {${2:type}} [${3:''}] ${4:description} */\n\
+	this.${1:name} = function(v) {\n\
+		return this.gc('${1:name}', ${3:''}, v,\n\
 		/** get */\n\
 		function(v) {\n\
 			return v;\n\
 		},\n\
 		/** set */\n\
-		function(v) {\n\
+		function(v, same) {\n\
 			return v;\n\
 		});\n\
 	};\n\
