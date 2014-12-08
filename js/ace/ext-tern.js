@@ -1383,7 +1383,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         paramStr += '</div>';
                     }
                     if (paramStr !== '') {
-                        str += '<span class="' + cls + 'jsdoc-param-wrapper">' + paramStr + '</span>';
+                        str = '<span class="' + cls + 'jsdoc-param-wrapper">' + paramStr + '</span>' + str;
                     }
                     //#endregion
 
