@@ -217,6 +217,7 @@ snippet prop (defineProperty)\n\
 snippet approp (ap Property)\n\
 	/** @approp @type {${2:type}} [${3:''}] ${4:description} */\n\
 	this.${1:name} = function(v) {\n\
+		var sf = this;\n\
 		var Get= function(v){\n\
 			return v;\n\
 		};\n\
