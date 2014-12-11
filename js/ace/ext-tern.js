@@ -2147,11 +2147,10 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function htmlEncode(string) {
         var entityMap = {
-            "&": "&amp;",
             "<": "&lt;",
             ">": "&gt;",
         };
-        return String(string).replace(/[&<>]/g, function(s) {
+        return String(string).replace(/[<>]/g, function(s) {
             if (!s) return '';
             return entityMap[s];
         });
