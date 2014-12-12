@@ -224,7 +224,7 @@ snippet approp (ap Property)\n\
 		var Set = function(v, same){\n\
 			return v;\n\
 		};\n\
-		return this.gc('${1:name}', ${3:''}, v, Get, Set);\n\
+		return this.mp('${1:name}', ${3:''}, v, Get, Set);\n\
 	};\n\
 \n\
 ";
