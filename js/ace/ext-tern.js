@@ -1358,7 +1358,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     for (var i = 0; i < params.length; i++) {
                         paramStr += '<div>';
                         if (params[i].parentName.trim() === '') {
-                            paramStr += '<span class="' + cls + 'jsdoc-tag">@param</span> ';
+                            paramStr += ' <span class="' + cls + 'jsdoc-tag">@param</span> ';
                         }
                         else {
                             paramStr += '<span class="' + cls + 'jsdoc-tag-param-child">&nbsp;</span> '; //dont show param tag for child param

@@ -217,14 +217,13 @@ snippet prop (defineProperty)\n\
 snippet approp (ap Property)\n\
 	/** @approp @type {${2:type}} [${3:''}] ${4:description} */\n\
 	this.${1:name} = function(v) {\n\
-		var sf = this;\n\
 		var Get= function(v){\n\
 			return v;\n\
 		};\n\
 		var Set = function(v, same){\n\
 			return v;\n\
 		};\n\
-		return this.mp('${1:name}', ${3:''}, v, Get, Set);\n\
+		return this.mp(this, '${1:name}', ${3:''}, v, Get, Set);\n\
 	};\n\
 \n\
 ";
