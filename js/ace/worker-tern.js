@@ -38,6 +38,7 @@ function onmessage(e) {
                 var tmp = [];
                 for (var i = 0; i < data.defs.length; i++) {
                     tmp.push(getDefFromName(data.defs[i]));
+                    // console.log('loading type def: ' + data.defs[i]);
                 }
                 data.defs = tmp;
             }
