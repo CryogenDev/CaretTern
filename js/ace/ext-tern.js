@@ -136,7 +136,7 @@ function(require, exports, module) {
 
     //#region Tern
     var ternOptions= {
-        defs: [/*'jquery',*/ 'browser', 'ecma5'],
+        defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
             doc_comment: true,
             /*requirejs: {
@@ -402,18 +402,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
     };
     /** @type {bool} set to true log info about completions */
     var debugCompletions = false;
-    /**
-     * {bool} prevents multiple update arg hints queries from executing at same time
-     */
-    // var isUpdatingArgHints=false;
-    /**
-     * {bool} prevents multiple server requests at same time
-     */
-    // var isInRequest=false;
-    /**
-     * {string} in request error message
-     */
-    // var isInRequestErr='isInRequest=true; Exiting;';
 
     //#endregion
 
@@ -540,30 +528,17 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         },
         /**
          * Sends request to tern server
-         * @param {object} query - http://ternjs.net/doc/manual.html#protocol
-         * @param {function} cb - callback
-         * @param {row,column} [pos] optionally pass this to check for call at a posistion other than current cursor posistion
          * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
          * @param {int} [timeout=1000] - timeout for the query
          */
-        request: function(editor, query, cb, pos, forcePushChangedfile, timeout) {
-            // if(isInRequest){
-            //     console.log('isInRequest=true; exiting');
-            //     cb(isInRequestErr);
-            //     return;
-            // }
+        request: function(editor, query, c, pos, forcePushChangedfile, timeout) {
             var self = this;
             var doc = findDoc(this, editor);
             var request = buildRequest(this, doc, query, pos, forcePushChangedfile, timeout);
-            // console.log('sending request: '+ query.type,request);
-            
-            // isInRequest=true;
-            // var startTime =performance.now();
+
             this.server.request(request, function(error, data) {
-                // console.log('Request done '+ (performance.now() - startTime).toFixed(2)+' ms');
-                // isInRequest=false;
                 if (!error && self.options.responseFilter) data = self.options.responseFilter(doc, query, request, error, data);
-                cb(error, data);
+                c(error, data);
             });
         },
         /**
@@ -794,7 +769,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return {
             query: query,
             files: files,
+<<<<<<< HEAD
             timeout: timeout || 1000
+=======
+            timeout: timeout | 1000
+>>>>>>> parent of 247523b... cleanup
         };
     }
     /**
@@ -2038,10 +2017,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
      */
     function updateArgHints(ts, editor) {
-       /* if(isUpdatingArgHints){
-            console.log('isUpdatingArgHints=true, exiting');
-            return;
-        }*/
         closeArgHints(ts);
         var callPos = getCallPos(editor);
         if (!callPos) {
@@ -2057,16 +2032,14 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
 
         //still going: get arg hints from server
-        var query = {
+        ts.request(editor, {
             type: "type",
             preferFunction: true,
             end: start
-        };
-        var cb = function(error, data) {
-            // isUpdatingArgHints=false;
+        }, function(error, data) {
             if (error) {
                 //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
-                if (error.toString().toLowerCase().indexOf('no expression at the given position') === -1 /*&& error != isInRequestErr*/) {
+                if (error.toString().toLowerCase().indexOf('no expression at the given position') === -1) {
                     return showError(ts, editor, error);
                 }
             }
@@ -2082,9 +2055,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 comments: data.doc //added by morgan- include comments with arg hints
             };
             showArgHints(ts, editor, argpos);
-        };
-        // isUpdatingArgHints=true;
-        ts.request(editor, query, cb, undefined, undefined, 100);
+        });
     }
     /**
      * Displays argument hints as tooltip
