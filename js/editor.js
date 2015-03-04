@@ -43,12 +43,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         editor.container.style.fontFamily = userConfig.fontFamily || null;
         editor.setAnimatedScroll(userConfig.animatedScroll || true);
         defaultFontSize();
-
+        
         //load tern
         ace.config.loadModule('ace/ext/language_tools', function() {
             ace.config.loadModule('ace/ext/tern', function() {
                 var ternOptions = {
-                    defs: [ /*'jquery',*/ 'browser', 'ecma5'],
+                    defs: ['jquery', 'browser', 'ecma5'],
                     plugins: {
                         /*requirejs: {
                                 "baseURL": "./",
@@ -89,26 +89,26 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                         //NOTE: the server must be restarted to change these options
                         //editor.ternServer.options.plugins.requirejs = userConfig.ternRequireJS;
                         //editor.ternServer.options.plugins.angular = true;
-
+                        
                         //set options that can be changed at any time without restarting server
-
+                        
                         /**
                          * used by tern to get name of current file
                          */
-                        editor.ternServer.options.getCurrentFileName = function(callback) {
-                            callback(editor.session.fileName);
+                        editor.ternServer.options.getCurrentFileName= function(callback){
+                             callback(editor.session.fileName);
                         };
-
+                        
                         /**
                          * @returns {string} resolved path
                          * NOTE: chromes filesystem wants to open files with forward slashes and they must start with the name of the opened project folder
                          * @param {string} path - path to resolve
                          */
-                        editor.ternServer.options.resolveFilePath = function(path, callback) {
+                        editor.ternServer.options.resolveFilePath= function(path, callback) {
                             try {
                                 /**
-                                 * get open project directories, needed to build the correct relative path
-                                 * (has to guess which directory to use by using string contains...
+                                 * get open project directories, needed to build the correct relative path 
+                                 * (has to guess which directory to use by using string contains... 
                                  *  could possibly break)
                                  */
                                 editor.session.file.getPath(function(err, p) {
@@ -161,14 +161,14 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                          * @param {string} name - full file path or relative (will likely be relative)
                          */
                         editor.ternServer.options.getFile = function(name, callback) {
-                            require(["ui/projectManager"], function(projectManager) {
-                                projectManager.readFile(name, function(err, data) {
-                                    if (err) {
-                                        console.log('err reading file ' + name, err);
-                                    }
-                                    callback(err, data);
+                                require(["ui/projectManager"], function(projectManager) {
+                                    projectManager.readFile(name, function(err, data) {
+                                        if (err) {
+                                            console.log('err reading file ' + name, err);
+                                        }
+                                        callback(err, data);
+                                    });
                                 });
-                            });
                         };
 
                         //tell it how to switch to another file
