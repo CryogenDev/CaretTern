@@ -718,7 +718,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * Build request to tern server
      * @param {TernDoc} doc - {doc: AceEditor, name: name of document, changed: {from:int, to:int}}
      * @param {bool} [forcePushChangedfile=false] - hack, force push large file change
-     * @param {int} [timeout=500] - timeout for the query
+     * @param {int} [timeout=1000] - timeout for the query
      */
     function buildRequest(ts, doc, query, pos, forcePushChangedfile, timeout) {
         /*
@@ -794,7 +794,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return {
             query: query,
             files: files,
-            timeout: timeout || 500
+            timeout: timeout || 1000
         };
     }
     /**
@@ -1100,7 +1100,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             function popupSelectionChanged() {
                 closeAllTips(); //remove(tooltip); //using close all , but its slower, comeback and remove single if its working right
                 //gets data of currently selected completion
-                var data = editor.completer.popup.getData(editor.completer.popup.getRow());
+                var data = editor.completer.popup ? editor.completer.popup.getData(editor.completer.popup.getRow()) : null;
                 if (!data || !data.doc) { //no comments
                     return;
                 }
