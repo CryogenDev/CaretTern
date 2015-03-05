@@ -4041,11 +4041,33 @@ var console = {
   function buildRename(srv, query, file) {
     if (typeof query.newName != "string") throw ternError(".query.newName should be a string");
     var expr = findExpr(file, query);
+    
+    // original code:
     if (!expr || expr.node.type != "Identifier") throw ternError("Not at a variable.");
-
     var data = findRefsToVariable(srv, query, file, expr, query.newName), refs = data.refs;
+    
+    //Morgans code.. doesn't work... will need to test inside of a tern without a worker to do further testing
+    // if(!expr)  throw ternError("failed to find expression");
+    // var data = null;
+    // if(expr.node.type == "Identifier"){
+    //     data = findRefsToVariable(srv, query, file, expr, query.newName), refs = data.refs;
+    // }
+    // else if(expr.node.type == "MemberExpression"){
+    //     if (expr.node.computed) throw ternError("Can't rename computed node"); //not exactly sure what this means.. copied from find refs
+    //     var p = expr.node.property;
+    //     expr.node = expr.node.object;
+    //     data = findRefsToProperty(srv, query, expr, p);
+    //     console.log(JSON.stringify(data));
+    // }
+    // else{
+    //     throw ternError("Can't rename node type: " + expr.node.type);
+    // }
+    
     delete data.refs;
     data.files = srv.files.map(function(f){return f.name;});
+
+
+
 
     var changes = data.changes = [];
     for (var i = 0; i < refs.length; ++i) {

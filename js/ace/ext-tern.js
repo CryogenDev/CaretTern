@@ -162,6 +162,7 @@ function(require, exports, module) {
     var editor_for_OnCusorChange = null;
 
     // 2.29.2015: removed auto show type on cursor as it may be having a performance impact for very large files (not completely sure but the feature wasn't all that great to being with so I just got rid of it)
+<<<<<<< HEAD
     // var debounce_ternShowType;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
@@ -171,6 +172,17 @@ function(require, exports, module) {
         //   //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
         //      editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
         // }, 300);
+=======
+    var debounce_ternShowType;
+    //show arguments hints when cursor is moved
+    var onCursorChange_Tern = function(e, editor_getSession_selection) {
+        //debounce to auto show type
+        clearTimeout(debounce_ternShowType);
+        debounce_ternShowType = setTimeout(function() {
+           //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
+             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
+        }, 300);
+>>>>>>> origin/master
 
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
@@ -225,14 +237,14 @@ function(require, exports, module) {
                     this.commands.addCommand(Autocomplete.startCommand);
                     editor_for_OnCusorChange = this; //hack
                     // console.log('binding on cursor change');
-                    this.getSession().selection.on('changeCursor', onCursorChange_Tern);
+                    // this.getSession().selection.on('changeCursor', onCursorChange_Tern);
                     this.commands.on('afterExec', onAfterExec_Tern);
                     aceTs.bindAceKeys(this);
                 }
                 else {
                     delete this.ternServer;
                     // console.log('disabling on cursor change');
-                    this.getSession().selection.off('changeCursor', onCursorChange_Tern);
+                    // this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
                     if (!this.enableBasicAutocompletion) {
                         this.commands.removeCommand(Autocomplete.startCommand);
