@@ -224,14 +224,14 @@ function(require, exports, module) {
                     this.commands.addCommand(Autocomplete.startCommand);
                     editor_for_OnCusorChange = this; //hack
                     // console.log('binding on cursor change');
-                    // this.getSession().selection.on('changeCursor', onCursorChange_Tern);
+                    this.getSession().selection.on('changeCursor', onCursorChange_Tern);
                     this.commands.on('afterExec', onAfterExec_Tern);
                     aceTs.bindAceKeys(this);
                 }
                 else {
                     delete this.ternServer;
                     // console.log('disabling on cursor change');
-                    // this.getSession().selection.off('changeCursor', onCursorChange_Tern);
+                    this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
                     if (!this.enableBasicAutocompletion) {
                         this.commands.removeCommand(Autocomplete.startCommand);
