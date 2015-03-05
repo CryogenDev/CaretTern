@@ -162,7 +162,6 @@ function(require, exports, module) {
     var editor_for_OnCusorChange = null;
 
     // 2.29.2015: removed auto show type on cursor as it may be having a performance impact for very large files (not completely sure but the feature wasn't all that great to being with so I just got rid of it)
-<<<<<<< HEAD
     // var debounce_ternShowType;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
@@ -172,18 +171,6 @@ function(require, exports, module) {
         //   //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
         //      editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
         // }, 300);
-=======
-    var debounce_ternShowType;
-    //show arguments hints when cursor is moved
-    var onCursorChange_Tern = function(e, editor_getSession_selection) {
-        //debounce to auto show type
-        clearTimeout(debounce_ternShowType);
-        debounce_ternShowType = setTimeout(function() {
-           //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
-             editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
-        }, 300);
->>>>>>> origin/master
-
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
 
