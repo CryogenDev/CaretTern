@@ -150,26 +150,27 @@ function(require, exports, module) {
             console.log('switchToDoc called but not defined. name=' + name + '; start=' + start);
         }
     };
-    
+
     var TernServer = require("../tern").TernServer;
     var aceTs;
     /** assigns local var aceTs to a new TernServer instance using local var ternOptions */
     var createTernServer=function(){
         aceTs = new TernServer(ternOptions);
     };
-    
+
     //hack: need a better solution to get the editor variable inside of the editor.getSession().selection.onchangeCursor event as the passed variable is of the selection, not the editor. This variable is being set in the enableTern set Option
     var editor_for_OnCusorChange = null;
 
-    var debounce_ternShowType;
+    // 2.29.2015: removed auto show type on cursor as it may be having a performance impact for very large files (not completely sure but the feature wasn't all that great to being with so I just got rid of it)
+    // var debounce_ternShowType;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
         //debounce to auto show type
-        clearTimeout(debounce_ternShowType);
-        debounce_ternShowType = setTimeout(function() {
-            //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
-            editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
-        }, 300);
+        // clearTimeout(debounce_ternShowType);
+        // debounce_ternShowType = setTimeout(function() {
+        //   //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
+        //      editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
+        // }, 300);
 
         editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
     };
@@ -194,8 +195,8 @@ function(require, exports, module) {
     };
     //minimum string length for tern local string completions. set to -1 to disable this
     var ternLocalStringMinLength = 3;
-    
-    
+
+
     completers.push(aceTs);
     exports.server = aceTs;
 
@@ -462,7 +463,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         refreshDoc: function(editor) {
             var doc = findDoc(this, editor);
             sendDoc(this, doc);
-            
+
             //delete all docs other than current and reload refs (HACK- this should be handled in a better way and need to figure out how it works with requireJS and how it works when all open documentes may be added to server?)
             /* added this 11.25.2014 but it broke other things with the current doc... needs more work as the below algorithm is not correct
             for (var p in this.docs) {
@@ -471,7 +472,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
             loadExplicitVsRefs(this, editor);*/
-         
+
             //tooltip
             var el = document.createElement('span');
             el.setAttribute('style', 'color:green;');
@@ -558,19 +559,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
          */
         docChanged: function(editor) {
             var sf = this;
-            
+
             //delete all docs
             for (var p in this.docs) {
                 this.delDoc(p);
             }
-            
+
             var finish=function(name){
                 sf.addDoc(name, editor);//add current doc
-                
+
                 //console.log('checking for VS refs because Doc changed... DISABLE when done with adding correct editorSession interface');
                 loadExplicitVsRefs(sf, editor);
             };
-            
+
             if(this.options.getCurrentFileName){
                 this.options.getCurrentFileName(finish);
             }
@@ -1668,7 +1669,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     editor.setAnimatedScroll(false);
                 }
                 //console.log('file='+file,'\ndoc',doc,'\ntargetDoc',targetDoc);// THIS IS NOT WORKING!
-                
+
                 moveTo(ts, doc, targetDoc, start, null, true);
                 //move the tooltip to new cusor pos after timeout (hopefully the cursor move is complete after timeout.. ghetto)
                 setTimeout(function() {
@@ -2343,7 +2344,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
 
             /* if (msg && msg.constructor.name === 'Error') {
-                
+
                 console.log('ternError', msg);
                 return;
             }
@@ -2697,7 +2698,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
             }
         }
-       
+
         //reads file and adds to tern
         var ReadFile_AddToTern = function(path) {
             try {
