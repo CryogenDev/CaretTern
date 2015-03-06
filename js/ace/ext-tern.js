@@ -2034,7 +2034,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }, function(error, data) {
             if (error) {
                 //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
-                if (error.toString().toLowerCase().indexOf('no expression at the given position') === -1) {
+                if (error.toString().toLowerCase().indexOf('no expression at') === -1 &&  error.toString().toLowerCase().indexOf('no type found at') === -1) {
                     return showError(ts, editor, error);
                 }
             }
