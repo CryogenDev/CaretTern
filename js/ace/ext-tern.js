@@ -161,17 +161,14 @@ function(require, exports, module) {
     //hack: need a better solution to get the editor variable inside of the editor.getSession().selection.onchangeCursor event as the passed variable is of the selection, not the editor. This variable is being set in the enableTern set Option
     var editor_for_OnCusorChange = null;
 
-    // 2.29.2015: removed auto show type on cursor as it may be having a performance impact for very large files (not completely sure but the feature wasn't all that great to being with so I just got rid of it)
-    // var debounce_ternShowType;
+    //3.6.2015: debounce arg hints as it can be quite slow in very large files
+    var debounceArgHints;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
-        //debounce to auto show type
-        // clearTimeout(debounce_ternShowType);
-        // debounce_ternShowType = setTimeout(function() {
-        //   //console.log('call pos',editor_for_OnCusorChange.ternServer.getCallPos(editor_for_OnCusorChange));
-        //      editor_for_OnCusorChange.ternServer.showType(editor_for_OnCusorChange, null, true); //show type
-        // }, 300);
-        editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
+        clearTimeout(debounceArgHints);
+        debounceArgHints = setTimeout(function() {
+            editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
+        }, 50);
     };
 
     //automatically start auto complete when period is typed
