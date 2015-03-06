@@ -48,8 +48,11 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         ace.config.loadModule('ace/ext/language_tools', function() {
             ace.config.loadModule('ace/ext/tern', function() {
                 var ternOptions = {
-                    defs: [/*'jquery',*/ 'browser', 'ecma5'],
+                    defs: [/*'jquery',*/ 'browser', 'ecma5'/*, 'ecma6'*/],
                     plugins: {
+                       /* complete_strings:{
+                            maxLength:30,
+                        },*/
                         /*requirejs: {
                                 "baseURL": "./",
                                 "paths": {}
