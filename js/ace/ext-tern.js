@@ -168,7 +168,7 @@ function(require, exports, module) {
         clearTimeout(debounceArgHints);
         debounceArgHints = setTimeout(function() {
             editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
-        }, 50);
+        }, 200);
     };
 
     //automatically start auto complete when period is typed
