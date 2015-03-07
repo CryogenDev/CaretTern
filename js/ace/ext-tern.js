@@ -1,14 +1,7 @@
-/// <reference path="../helpers.js" />
-/// <reference path="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore.js" />
-
-/*jshint maxerr:10000 */
+/*jshint maxerr:10000, eqnull:true */
 
 /**
  * Ace Tern server configuration (uses worker in separate file)
- *
- * TODO:
- * - make enable/disable tern server via ace config and expose the server as public exports
- * - auto init the server and disable it when its not needed
  */
 ace.define('ace/ext/tern', ['require', 'exports', 'module', 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/editor'],
 
@@ -129,13 +122,12 @@ function(require, exports, module) {
     };
     var onChangeMode = function(e, editor) {
         loadSnippetsForMode(editor.session.$mode);
-        // log(editor, editor.session.$mode);
     };
     //#endregion
 
 
     //#region Tern
-    var ternOptions= {
+    var ternOptions = {
         defs: ['jquery', 'browser', 'ecma5'],
         plugins: {
             doc_comment: true,
@@ -147,14 +139,14 @@ function(require, exports, module) {
         workerScript: ace.config.moduleUrl('worker/tern'),
         useWorker: true,
         switchToDoc: function(name, start) {
-            console.log('switchToDoc called but not defined. name=' + name + '; start=' + start);
+            console.log('switchToDoc called but not defined. name=' + name + '; start=', start);
         }
     };
 
     var TernServer = require("../tern").TernServer;
     var aceTs;
     /** assigns local var aceTs to a new TernServer instance using local var ternOptions */
-    var createTernServer=function(){
+    var createTernServer = function() {
         aceTs = new TernServer(ternOptions);
     };
 
@@ -206,9 +198,9 @@ function(require, exports, module) {
              * @note - Use this to restart tern with new options by setting to false then true again by passing new options;
              */
             set: function(val) {
-                if(typeof val === 'object'){
+                if (typeof val === 'object') {
                     ternOptions = val; //TODO: perhaps merge options with defaults..
-                    val=true;
+                    val = true;
                 }
                 if (val) {
                     createTernServer();
@@ -220,14 +212,12 @@ function(require, exports, module) {
                     this.ternServer = aceTs;
                     this.commands.addCommand(Autocomplete.startCommand);
                     editor_for_OnCusorChange = this; //hack
-                    // console.log('binding on cursor change');
                     this.getSession().selection.on('changeCursor', onCursorChange_Tern);
                     this.commands.on('afterExec', onAfterExec_Tern);
                     aceTs.bindAceKeys(this);
                 }
                 else {
                     delete this.ternServer;
-                    // console.log('disabling on cursor change');
                     this.getSession().selection.off('changeCursor', onCursorChange_Tern);
                     this.commands.off('afterExec', onAfterExec_Tern);
                     if (!this.enableBasicAutocompletion) {
@@ -561,18 +551,18 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 this.delDoc(p);
             }
 
-            var finish=function(name){
-                sf.addDoc(name, editor);//add current doc
+            var finish = function(name) {
+                sf.addDoc(name, editor); //add current doc
 
                 //console.log('checking for VS refs because Doc changed... DISABLE when done with adding correct editorSession interface');
                 loadExplicitVsRefs(sf, editor);
             };
 
-            if(this.options.getCurrentFileName){
+            if (this.options.getCurrentFileName) {
                 this.options.getCurrentFileName(finish);
             }
-            else{
-                finish('current');//name the file current
+            else {
+                finish('current'); //name the file current
             }
         },
         /**
@@ -621,12 +611,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * This is needed for ChromeApp as relative paths are weight with the Chrome file system api;
      * @param {function} cb - callback(resolvedName); will be executed with passed name if resolveFilePath option is not passed
      */
-    function resolveFilePath(ts,name,cb){
-        if(ts.options.resolveFilePath){
-            ts.options.resolveFilePath(name,cb);
+    function resolveFilePath(ts, name, cb) {
+        if (ts.options.resolveFilePath) {
+            ts.options.resolveFilePath(name, cb);
         }
-        else{
-            cb(name);//return original name
+        else {
+            cb(name); //return original name
         }
     }
     /**
@@ -722,7 +712,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             }
         }
 
-        // log('doc',doc);
         var startPos = query.start || query.end;
 
         if (doc.changed) {
@@ -1163,7 +1152,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             //10ms timeout because jumping the cusor around alot often causes the reported cusor posistion to be the last posistion it was in instaed of its current posistion
             setTimeout(function() {
                 var place = getCusorPosForTooltip(editor);
-                // console.log('place',place);
                 // setTimeout(function(){console.log('place after 1ms', getCusorPosForTooltip(editor));},1);
                 makeTooltip(place.left, place.top, tip, editor, true); //tempTooltip(editor, tip, -1); - was temp tooltip.. TODO: add temptooltip fn
             }, 10);
@@ -1184,7 +1172,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {int} [activeArg] pass posistion of active argument if in arg hints (fist arg is 0)
      */
     function createInfoDataTip(data, includeType, activeArg) {
-        //log('data', data, 'includeType', includeType, 'parseFnType(data.type)', parseFnType(data.type));
+        //console.log('data', data, 'includeType', includeType, 'parseFnType(data.type)', parseFnType(data.type));
         //TODO: add links in tooltip: jumpto, find refs
         tip = elt("span", null);
 
@@ -1247,6 +1235,13 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     var isCurrent = !isNaN(parseInt(activeArg)) ? i === activeArg : false;
                     var arg = fnArgs.args[i]; //name,type
                     var name = arg.name || "?";
+
+                    //as of tern .9.1 update it will append a questionmark to the end of param if its optional (but it doesnt parse optional params properly in many cases)
+                    if (name.length > 1 && name.substr(name.length - 1) === '?') {
+                        name = name.substr(0, name.length - 1);
+                        arg.name = name; //update the arg var with proper name for use below
+                    }
+
                     if (!useDetailedArgHints) {
                         paramStr += htmlEncode(name);
                     }
@@ -1705,7 +1700,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                     }
                 }
                 catch (ex) {
-                    log('findRefs inner loop error (should not happen)', ex);
+                    console.log('findRefs inner loop error (should not happen)', ex);
                 }
             }
         });
@@ -1789,7 +1784,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * TODO: this only works for current file at the moment!
      */
     function applyChanges(ts, changes, cb) {
-        log('changes', changes);
+        // console.log('changes', changes);
         var Range = ace.require("ace/range").Range; //for ace
         var perFile = Object.create(null);
         for (var i = 0; i < changes.length; ++i) {
@@ -1806,7 +1801,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         for (var file in perFile) {
             var known = ts.docs[file],
-                chs = perFile[file];;
+                chs = perFile[file];
             if (!known) continue;
             chs.sort(function(a, b) {
                 return cmpPos(b.start, a.start);
@@ -1828,7 +1823,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 }
                 catch (ex) {
                     result.errors += '\n ' + file + ' - ' + ex.toString();
-                    log('error applying rename changes', ex);
+                    console.log('error applying rename changes', ex);
                 }
             }
         }
@@ -1941,18 +1936,49 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                         depth -= 1;
                     }
                     else if (ch === '(') {
+                        //#region ensure before start of paren is function call
+                        
+                        //set to true to log info about potential function calls
+                        var debugFnCall = false;
+
                         //check before call start to make sure its not a function definition
-                        var wordBeforeFnName = thisRow.substr(0, col).split(' ').reverse()[1];
-                        if (wordBeforeFnName && wordBeforeFnName.toLowerCase() === 'function') {
+                        var upToParen = thisRow.substr(0, col);
+                        if (!upToParen.length) {
+                            if (debugFnCall) console.log('not fn call because before parent is empty');
                             break;
                         }
-                        //Make sure this is not in a comment or start of a if statement
+                        if (upToParen.substr(upToParen.length - 1) === ' ') {
+                            if (debugFnCall) console.log('not fn call because there is a space before paren');
+                            //NOTE: technically there can be a space before paren in function call, but it would be horrific code
+                            //NOTE: this check also ensure we dont think the following are function calls:
+                            //      if ()
+                            //      for ()
+                            // without this check, the keyword check that rules out 'if' and 'for' before paren
+                            // wouldn't work because the token before the opening paren is a space, which is token type `text`
+                            break;
+                        }
+
+                        //ensure that this is not a function delcaration
+                        //this ensures we dont get arg hints for:
+                        //      function testfn([cursorHere]){}
+                        var wordBeforeFnName = upToParen.split(' ').reverse()[1];
+                        if (wordBeforeFnName && wordBeforeFnName.toLowerCase() === 'function') {
+                            if (debugFnCall) console.log('not fn call because this is a function declaration');
+                            break;
+                        }
+
+                        //Make sure this is not in a comment or start of a if, for, while, etc... statemen
+                        //also, dont get arg hints for anon function delcaration (token.type storage.type),
+                        //  example:  function([cursorHere]){}   (dont get arg hints for this)
                         var token = editor.session.getTokenAt(row, col);
                         if (token) {
-                            if (token.type.toString().indexOf('comment') !== -1 || token.type === 'keyword') {
+                            if (token.type.toString().indexOf('comment') !== -1 || token.type === 'keyword' || token.type === 'storage.type') {
+                                if (debugFnCall) console.log('existing because token is comment, keyword, or storage.type (`function`)');
                                 break;
                             }
                         }
+
+                        if (debugFnCall) console.info('getting arg hints!');
                         start = {
                             line: row,
                             ch: col
@@ -1975,9 +2001,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         //#endregion
 
-        if (!start.hasOwnProperty('line')) { //start not found
-            return;
-        }
+        if (!start.hasOwnProperty('line')) return; //start not found
 
         //get argument posistion inside of call by adding one for each comma that occurs after start pos
         var argpos = 0;
@@ -2031,7 +2055,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }, function(error, data) {
             if (error) {
                 //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
-                if (error.toString().toLowerCase().indexOf('no expression at') === -1 &&  error.toString().toLowerCase().indexOf('no type found at') === -1) {
+                if (error.toString().toLowerCase().indexOf('no expression at') === -1 && error.toString().toLowerCase().indexOf('no type found at') === -1) {
                     return showError(ts, editor, error);
                 }
             }
@@ -2331,20 +2355,12 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     function showError(ts, editor, msg, noPopup) {
         try {
-            log('ternError', msg);
+            console.log('ternError', msg);
             if (!noPopup) {
                 var el = elt('span', null, msg);
                 el.style.color = 'red';
                 tempTooltip(editor, el);
-                //tempTooltip(editor, msg.toString());
             }
-
-            /* if (msg && msg.constructor.name === 'Error') {
-
-                console.log('ternError', msg);
-                return;
-            }
-            console.log(new Error('ternError: ' + msg));*/
         }
         catch (ex) {
             setTimeout(function() {
@@ -2354,13 +2370,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 throw new Error('tern show error failed.' + msg + '\n\n fail error:' + ex);
             }, 0);
         }
-        //DBG(arguments,true);
-
-        //console.log('tern error', new Error('tern error: ' + msg));
-        /* dont like this method as it prevents stack trace
-        setTimeout(function() {
-            throw new Error('tern error: ' + msg);
-        }, 0);*/
     }
     /**
      * Closes any active arg hints
@@ -2503,9 +2512,9 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return data;
 
-        //COMEBACK--- need to use editor.find.... NOT IN USE RIGHT NOW... need to fix!
+        //TODO--- need to use editor.find.... NOT IN USE RIGHT NOW... need to fix!
         console.log(new Error('This part is not complete, need to implement using Ace\'s search functionality'));
-        console.log('data.context', data.context);
+        // console.log('data.context', data.context);
         var cursor = editor.getSearchCursor(data.context, 0, false);
         var nearest, nearestDist = Infinity;
         while (cursor.findNext()) {
@@ -2536,7 +2545,6 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         var tok = editor.session.getTokenAt(pos.row, pos.column); // editor.getTokenAt(pos);
         pos = toTernLoc(pos);
         if (tok.start < pos.ch && (tok.type == "comment" || tok.type == "string")) {
-            // log('not atInterestingExpression');
             return false;
         }
         return /\w/.test(editor.session.getLine(pos.line).slice(Math.max(pos.ch - 1, 0), pos.ch + 1));
@@ -2614,11 +2622,8 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
             _change.text = change.data.lines;
         }
 
-
         var data = findDoc(ts, doc);
-        //log('data', data);//-- gets current doc on tern server, value can be otained by : data.doc.session.getValue()
         var argHints = ts.cachedArgHints;
-
 
         if (argHints && argHints.doc == doc && cmpPos(argHints.start, _change.to) <= 0) {
             ts.cachedArgHints = null;
@@ -2627,13 +2632,11 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
 
         var changed = data.changed; //data is the tern server doc, which keeps a changed property, which is null here
         if (changed === null) {
-            //log('changed is null');
             data.changed = changed = {
                 from: _change.from.line,
                 to: _change.from.line
             };
         }
-        // log('_change', _change, 'changed', changed);
 
         var end = _change.from.line + (_change.text.length - 1);
         if (_change.from.line < changed.to) {
@@ -2748,7 +2751,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      * @param {function} [workerClass=Worker] - (hack) allows using a custom 'worker', used by Chrome extension to create a fake worker
      */
     function WorkerServer(ts, workerClass) {
-        var worker = workerClass? new workerClass() :  new Worker(ts.options.workerScript);
+        var worker = workerClass ? new workerClass() : new Worker(ts.options.workerScript);
         /**
          * Starts worker server (or can be used to restart with new plugins/options)
          */
@@ -2788,7 +2791,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
                 });
             }
             else if (data.type == "debug") {
-                console.log(data.message);
+                console.log('(worker debug) ', data.message);
             }
             else if (data.id && pending[data.id]) {
                 pending[data.id](data.err, data.body);

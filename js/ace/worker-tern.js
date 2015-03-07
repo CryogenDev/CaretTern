@@ -15,7 +15,9 @@
 
 var server;
 
-//modified to send messages back to secure
+
+//#region hack - for caret Chrome App only
+//chrome  app must run in 'sandbox' due to use of new Function and eval in acorn
 var parentSource = null;
 var parentOrigin = null;
 window.addEventListener('message', function (event) {
@@ -28,6 +30,8 @@ window.addEventListener('message', function (event) {
 function postMessage(message) {
     parentSource.postMessage(message, parentOrigin);
 }
+//#endregion
+
 
 function onmessage(e) {
     //console.log('onmessage');
@@ -114,11 +118,8 @@ function getFile(file, c) {
 }
 
 function startServer(defs, plugins, scripts) {
-    console.log('startServer');
+    console.log('tern: starting server');
     if (scripts) importScripts.apply(null, scripts);
-    if(server){//Morgan- because server can be restarted
-      delete server;
-    }
     server = new tern.Server({
         getFile: getFile,
         async: true,
@@ -130,8 +131,6 @@ function startServer(defs, plugins, scripts) {
 var console = {
     log: function (v) { postMessage({ type: "debug", message: v }); }
 };
-
-
 
 
 
