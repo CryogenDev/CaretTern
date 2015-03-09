@@ -26,9 +26,9 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         //let main.js know this module is ready
         return "editor";
     };
-
+    
     //reloaded when settings change
-    var reset = function() {
+    function reset() {
         userConfig = Settings.get("user");
         themes.value = userConfig.defaultTheme;
         editor.setTheme("ace/theme/" + themes.value);
@@ -199,7 +199,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 }
             });
         });
-    };
+    }
 
     //#endregion
 
