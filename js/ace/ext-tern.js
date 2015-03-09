@@ -154,13 +154,13 @@ function(require, exports, module) {
     var editor_for_OnCusorChange = null;
 
     //3.6.2015: debounce arg hints as it can be quite slow in very large files
-    var debounceArgHints;
+     var debounceArgHints;
     //show arguments hints when cursor is moved
     var onCursorChange_Tern = function(e, editor_getSession_selection) {
         clearTimeout(debounceArgHints);
         debounceArgHints = setTimeout(function() {
             editor_for_OnCusorChange.ternServer.updateArgHints(editor_for_OnCusorChange);
-        }, 200);
+        }, 10);
     };
 
     //automatically start auto complete when period is typed
