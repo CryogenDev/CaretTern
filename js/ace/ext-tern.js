@@ -748,7 +748,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         return {
             query: query,
             files: files,
-            timeout: timeout | 1000
+            timeout: timeout || 1000
         };
     }
     /**
@@ -2022,16 +2022,19 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         }
         return false;
     }
+    
+    var debounce_updateArgHints=null;
     /**
      * If editor is currently inside of a function call, this will try to get definition of the function that is being called, if successfull will show tooltip about arguments for the function being called.
      * NOTE: did performance testing and found that scanning for callstart takes less than 1ms
      */
     function updateArgHints(ts, editor) {
-        closeArgHints(ts);
         var callPos = getCallPos(editor);
         if (!callPos) {
+            closeArgHints(ts);
             return;
         }
+        closeArgHints(ts);
         var start = callPos.start;
         var argpos = callPos.argpos;
 
@@ -2040,32 +2043,38 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (cache && cache.doc == editor && cmpPos(start, cache.start) === 0) {
             return showArgHints(ts, editor, argpos);
         }
-
+        
+        //large debounce when having to get new arg hints as its expensive and moving cursor around rapidly can hit this alot
+        clearTimeout(debounce_updateArgHints);
+        debounce_updateArgHints = setTimeout(inner, 300);
+        
         //still going: get arg hints from server
-        ts.request(editor, {
-            type: "type",
-            preferFunction: true,
-            end: start
-        }, function(error, data) {
-            if (error) {
-                //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
-                if (error.toString().toLowerCase().indexOf('no expression at') === -1 && error.toString().toLowerCase().indexOf('no type found at') === -1) {
-                    return showError(ts, editor, error);
+        function inner(){
+            ts.request(editor, {
+                type: "type",
+                preferFunction: true,
+                end: start
+            }, function(error, data) {
+                if (error) {
+                    //TODO: get this error a lot, likely because its trying to show arg hints where there is not a call, need update the method for finding call above to be more accurate
+                    if (error.toString().toLowerCase().indexOf('no expression at') === -1 && error.toString().toLowerCase().indexOf('no type found at') === -1) {
+                        return showError(ts, editor, error);
+                    }
                 }
-            }
-            if (error || !data.type || !(/^fn\(/).test(data.type)) {
-                return;
-            }
-            ts.cachedArgHints = {
-                start: start,
-                type: parseFnType(data.type),
-                name: data.exprName || data.name || "fn",
-                guess: data.guess,
-                doc: editor,
-                comments: data.doc //added by morgan- include comments with arg hints
-            };
-            showArgHints(ts, editor, argpos);
-        });
+                if (error || !data.type || !(/^fn\(/).test(data.type)) {
+                    return;
+                }
+                ts.cachedArgHints = {
+                    start: start,
+                    type: parseFnType(data.type),
+                    name: data.exprName || data.name || "fn",
+                    guess: data.guess,
+                    doc: editor,
+                    comments: data.doc //added by morgan- include comments with arg hints
+                };
+                showArgHints(ts, editor, argpos);
+            });
+        }
     }
     /**
      * Displays argument hints as tooltip
