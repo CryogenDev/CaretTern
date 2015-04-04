@@ -11,6 +11,7 @@
  *
  * NOTE: in order to get latest acorn version you now must get from NPM or manually build Acorn source. Easiest way is to create a new folder and use: npm install acorn
  * NOTE: Had to manually change 'nonASCIIidentifierChars' in acorn file beacuse it had some jibberish characters that was cuasing chrome to throw unexpected token error
+ * NOTE: use acorn_csp.js instead of acorn.js as it now works without eval and then i can remove the chrome app hack... but at the moment the current version of acorn is broken in web workers, once this is fixed get lastest version using csp and remove fake worker junk here and in caret-t
  */
 
 // declare global: tern, server
@@ -3464,20 +3465,16 @@ var tt = require("..").tokTypes;
 
 var lp = LooseParser.prototype;
 
-lp.checkLVal = function (expr, binding) {
+lp.checkLVal = function (expr) {
   if (!expr) return expr;
   switch (expr.type) {
     case "Identifier":
-      return expr;
-
     case "MemberExpression":
-      return binding ? this.dummyIdent() : expr;
-
     case "ObjectPattern":
     case "ArrayPattern":
     case "RestElement":
     case "AssignmentPattern":
-      if (this.options.ecmaVersion >= 6) return expr;
+      return expr;
 
     default:
       return this.dummyIdent();
@@ -3618,6 +3615,7 @@ lp.parseSubscripts = function (base, start, noCalls, startIndent, line) {
       this.expect(tt.bracketR);
       base = this.finishNode(node, "MemberExpression");
     } else if (!noCalls && this.tok.type == tt.parenL) {
+      this.pushCx();
       var node = this.startNodeAt(start);
       node.callee = base;
       node.arguments = this.parseExprList(tt.parenR);
@@ -3688,6 +3686,7 @@ lp.parseExprAtom = function () {
 
     case tt.bracketL:
       node = this.startNode();
+      this.pushCx();
       node.elements = this.parseExprList(tt.bracketR, true);
       return this.finishNode(node, "ArrayExpression");
 
@@ -3738,6 +3737,7 @@ lp.parseNew = function () {
   var start = this.storeCurrentPos();
   node.callee = this.parseSubscripts(this.parseExprAtom(), start, true, startIndent, line);
   if (this.tok.type == tt.parenL) {
+    this.pushCx();
     node.arguments = this.parseExprList(tt.parenR);
   } else {
     node.arguments = [];
@@ -3883,24 +3883,24 @@ lp.initFunction = function (node) {
 // Convert existing expression atom to assignable pattern
 // if possible.
 
-lp.toAssignable = function (node, binding) {
+lp.toAssignable = function (node) {
   if (this.options.ecmaVersion >= 6 && node) {
     switch (node.type) {
       case "ObjectExpression":
         node.type = "ObjectPattern";
         var props = node.properties;
         for (var i = 0; i < props.length; i++) {
-          this.toAssignable(props[i].value, binding);
+          this.toAssignable(props[i].value);
         }break;
 
       case "ArrayExpression":
         node.type = "ArrayPattern";
-        this.toAssignableList(node.elements, binding);
+        this.toAssignableList(node.elements);
         break;
 
       case "SpreadElement":
         node.type = "RestElement";
-        node.argument = this.toAssignable(node.argument, binding);
+        node.argument = this.toAssignable(node.argument);
         break;
 
       case "AssignmentExpression":
@@ -3908,18 +3908,19 @@ lp.toAssignable = function (node, binding) {
         break;
     }
   }
-  return this.checkLVal(node, binding);
+  return this.checkLVal(node);
 };
 
-lp.toAssignableList = function (exprList, binding) {
+lp.toAssignableList = function (exprList) {
   for (var i = 0; i < exprList.length; i++) {
-    exprList[i] = this.toAssignable(exprList[i], binding);
+    this.toAssignable(exprList[i]);
   }return exprList;
 };
 
 lp.parseFunctionParams = function (params) {
+  this.pushCx();
   params = this.parseExprList(tt.parenR);
-  return this.toAssignableList(params, true);
+  return this.toAssignableList(params);
 };
 
 lp.parseMethod = function (isGenerator) {
@@ -3934,14 +3935,13 @@ lp.parseMethod = function (isGenerator) {
 
 lp.parseArrowExpression = function (node, params) {
   this.initFunction(node);
-  node.params = this.toAssignableList(params, true);
+  node.params = this.toAssignableList(params);
   node.expression = this.tok.type !== tt.braceL;
   node.body = node.expression ? this.parseMaybeAssign() : this.parseBlock();
   return this.finishNode(node, "ArrowFunctionExpression");
 };
 
 lp.parseExprList = function (close, allowEmpty) {
-  this.pushCx();
   var indent = this.curIndent,
       line = this.curLineStart,
       elts = [];
@@ -4267,7 +4267,7 @@ lp.parseStatement = function () {
         var clause = this.startNode();
         this.next();
         this.expect(tt.parenL);
-        clause.param = this.toAssignable(this.parseExprAtom(), true);
+        clause.param = this.toAssignable(this.parseExprAtom());
         this.expect(tt.parenR);
         clause.guard = null;
         clause.body = this.parseBlock();
@@ -4370,7 +4370,7 @@ lp.parseVar = function (noIn) {
   node.declarations = [];
   do {
     var decl = this.startNode();
-    decl.id = this.options.ecmaVersion >= 6 ? this.toAssignable(this.parseExprAtom(), true) : this.parseIdent();
+    decl.id = this.options.ecmaVersion >= 6 ? this.toAssignable(this.parseExprAtom()) : this.parseIdent();
     decl.init = this.eat(tt.eq) ? this.parseMaybeAssign(noIn) : null;
     node.declarations.push(this.finishNode(decl, "VariableDeclarator"));
   } while (this.eat(tt.comma));

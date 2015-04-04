@@ -60,7 +60,9 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                     },
                     workerScript: ace.config.moduleUrl('worker/tern'),
                     useWorker: true,
-                    /** use a fake worker for tern server that uses sandbox because chrome app cant use eval outside of sandbox (terns acorn parser uses eval) */
+                    /** use a fake worker for tern server that uses sandbox because chrome app cant use eval outside of sandbox (terns acorn parser uses eval) 
+                     * todo: once new acorn works in web worker can get rid of this by using acorn_csp!
+                    */
                     workerClass: function() {
                         var self = this;
                         this.sandboxFrame = document.getElementById('sandboxFrame');
