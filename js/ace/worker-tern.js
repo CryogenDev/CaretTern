@@ -11,7 +11,8 @@
  *
  * NOTE: in order to get latest acorn version you now must get from NPM or manually build Acorn source. Easiest way is to create a new folder and use: npm install acorn
  * NOTE: Had to manually change 'nonASCIIidentifierChars' in acorn file beacuse it had some jibberish characters that was cuasing chrome to throw unexpected token error
- * NOTE: use acorn_csp.js instead of acorn.js as it now works without eval and then i can remove the chrome app hack... but at the moment the current version of acorn is broken in web workers, once this is fixed get lastest version using csp and remove fake worker junk here and in caret-t
+ * 
+ * NOTE: use acorn_csp.js instead of acorn.js as it now works without eval and then i can remove the chrome app hack... but at the moment the current version of acorn is broken in web workers, once this is fixed get lastest version using csp and remove fake worker junk here and in caret-t; CANT COPY THIS TO TERN.ACE FILE UNTIL ACORN IS FIXED AS IT DOESNT WORK IN WEB WORKER YET, ONCE IT DOES GET THE LATEST CSP VERSION AND PUT IN HERE, THEN UPDATE TERN.ACE
  */
 
 // declare global: tern, server
