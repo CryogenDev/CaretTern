@@ -1,8 +1,6 @@
-/** Tern web worker, which is used by default
+﻿/** Tern web worker, which is used by default
  * This file also contains all files that are needed for the web worker to run (the server can load files on demand, but its messy to have all these files for once peice of ace functionality) *
  *
- * doc_comment.js has a line commented out because its annoying: if (dot > 5) first = first.slice(0, dot + 1);
- *      (this line causes returned comments for functions to be trimmed after first string)
  *
  * Last updated 4/4/2015
  * Versions:
@@ -10,9 +8,10 @@
  *      Tern:  0.10.0
  *
  * NOTE: in order to get latest acorn version you now must get from NPM or manually build Acorn source. Easiest way is to create a new folder and use: npm install acorn
- * NOTE: Had to manually change 'nonASCIIidentifierChars' in acorn file beacuse it had some jibberish characters that was cuasing chrome to throw unexpected token error
  * 
- * NOTE: use acorn_csp.js instead of acorn.js as it now works without eval and then i can remove the chrome app hack... but at the moment the current version of acorn is broken in web workers, once this is fixed get lastest version using csp and remove fake worker junk here and in caret-t; CANT COPY THIS TO TERN.ACE FILE UNTIL ACORN IS FIXED AS IT DOESNT WORK IN WEB WORKER YET, ONCE IT DOES GET THE LATEST CSP VERSION AND PUT IN HERE, THEN UPDATE TERN.ACE
+ * NOTE: There is a bug with chrome.fileSystem that makes saving this file (specifically acorn.js) break (messes up UTF-8 encoding). https://code.google.com/p/chromium/issues/detail?id=474183. This file must be saved with a non-chrome app. If saved with a chrome app, then overwrting save wont fix, instead must delete file and save as new file from non-chrome app. 
+ * 
+ * NOTE: acorn_csp.js works without eval, but tern still has code that requires eval so there is no reason to use acorn_csp.
  */
 
 // declare global: tern, server
@@ -141,7 +140,7 @@ var console = {
 
 //#region acorn/dist/acorn.js
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.acorn = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.acorn = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 
 
 // The main exported interface (under `self.acorn` when in the
@@ -189,54 +188,54 @@ Object.defineProperty(exports, "__esModule", {
 // [dammit]: acorn_loose.js
 // [walk]: util/walk.js
 
-var _state = require("./state");
+var _state = _dereq_("./state");
 
 var Parser = _state.Parser;
 
-var _options = require("./options");
+var _options = _dereq_("./options");
 
 var getOptions = _options.getOptions;
 
-require("./parseutil");
+_dereq_("./parseutil");
 
-require("./statement");
+_dereq_("./statement");
 
-require("./lval");
+_dereq_("./lval");
 
-require("./expression");
+_dereq_("./expression");
 
 exports.Parser = _state.Parser;
 exports.plugins = _state.plugins;
 exports.defaultOptions = _options.defaultOptions;
 
-var _location = require("./location");
+var _location = _dereq_("./location");
 
 exports.SourceLocation = _location.SourceLocation;
 exports.getLineInfo = _location.getLineInfo;
-exports.Node = require("./node").Node;
+exports.Node = _dereq_("./node").Node;
 
-var _tokentype = require("./tokentype");
+var _tokentype = _dereq_("./tokentype");
 
 exports.TokenType = _tokentype.TokenType;
 exports.tokTypes = _tokentype.types;
 
-var _tokencontext = require("./tokencontext");
+var _tokencontext = _dereq_("./tokencontext");
 
 exports.TokContext = _tokencontext.TokContext;
 exports.tokContexts = _tokencontext.types;
 
-var _identifier = require("./identifier");
+var _identifier = _dereq_("./identifier");
 
 exports.isIdentifierChar = _identifier.isIdentifierChar;
 exports.isIdentifierStart = _identifier.isIdentifierStart;
-exports.Token = require("./tokenize").Token;
+exports.Token = _dereq_("./tokenize").Token;
 
-var _whitespace = require("./whitespace");
+var _whitespace = _dereq_("./whitespace");
 
 exports.isNewLine = _whitespace.isNewLine;
 exports.lineBreak = _whitespace.lineBreak;
 exports.lineBreakG = _whitespace.lineBreakG;
-var version = "1.0.1";exports.version = version;
+var version = "1.0.2";exports.version = version;
 
 function parse(input, options) {
   var p = parser(options, input);
@@ -259,7 +258,7 @@ function parser(options, input) {
   return new Parser(getOptions(options), String(input));
 }
 
-},{"./expression":2,"./identifier":3,"./location":4,"./lval":5,"./node":6,"./options":7,"./parseutil":8,"./state":9,"./statement":10,"./tokencontext":11,"./tokenize":12,"./tokentype":13,"./whitespace":15}],2:[function(require,module,exports){
+},{"./expression":2,"./identifier":3,"./location":4,"./lval":5,"./node":6,"./options":7,"./parseutil":8,"./state":9,"./statement":10,"./tokencontext":11,"./tokenize":12,"./tokentype":13,"./whitespace":15}],2:[function(_dereq_,module,exports){
 // A recursive descent parser operates by defining functions for all
 // syntactic elements, and recursively calling those, each function
 // advancing the input stream and returning an AST node. Precedence
@@ -280,13 +279,13 @@ function parser(options, input) {
 
 "use strict";
 
-var tt = require("./tokentype").types;
+var tt = _dereq_("./tokentype").types;
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var reservedWords = require("./identifier").reservedWords;
+var reservedWords = _dereq_("./identifier").reservedWords;
 
-var has = require("./util").has;
+var has = _dereq_("./util").has;
 
 var pp = Parser.prototype;
 
@@ -511,7 +510,7 @@ pp.parseExprAtom = function (refShorthandDefaultPos) {
       return this.finishNode(node, type);
 
     case tt._yield:
-      if (this.inGenerator) unexpected();
+      if (this.inGenerator) this.unexpected();
 
     case tt.name:
       var start = this.markPosition();
@@ -920,7 +919,7 @@ pp.parseComprehension = function (node, isGenerator) {
   return this.finishNode(node, "ComprehensionExpression");
 };
 
-},{"./identifier":3,"./state":9,"./tokentype":13,"./util":14}],3:[function(require,module,exports){
+},{"./identifier":3,"./state":9,"./tokentype":13,"./util":14}],3:[function(_dereq_,module,exports){
 
 
 // Test whether a given character code starts an identifier.
@@ -944,59 +943,26 @@ Object.defineProperty(exports, "__esModule", {
 //
 // It starts by sorting the words by length.
 
-function makePredicate(words) {
-  words = words.split(" ");
-  var f = "",
-      cats = [];
-  out: for (var i = 0; i < words.length; ++i) {
-    for (var j = 0; j < cats.length; ++j) {
-      if (cats[j][0].length == words[i].length) {
-        cats[j].push(words[i]);
-        continue out;
-      }
-    }cats.push([words[i]]);
-  }
-  function compareTo(arr) {
-    if (arr.length == 1) {
-      return f += "return str === " + JSON.stringify(arr[0]) + ";";
-    }f += "switch(str){";
-    for (var i = 0; i < arr.length; ++i) {
-      f += "case " + JSON.stringify(arr[i]) + ":";
-    }f += "return true}return false;";
-  }
-
-  // When there are more than three length categories, an outer
-  // switch first dispatches on the lengths, to save on comparisons.
-
-  if (cats.length > 3) {
-    cats.sort(function (a, b) {
-      return b.length - a.length;
-    });
-    f += "switch(str.length){";
-    for (var i = 0; i < cats.length; ++i) {
-      var cat = cats[i];
-      f += "case " + cat[0].length + ":";
-      compareTo(cat);
-    }
-    f += "}"
-
-    // Otherwise, simply generate a flat `switch` statement.
-
-    ;
-  } else {
-    compareTo(words);
-  }
-  return new Function("str", f);
-}
+// Removed to create an eval-free library
 
 // Reserved word lists for various dialects of the language
 
 var reservedWords = {
-  3: makePredicate("abstract boolean byte char class double enum export extends final float goto implements import int interface long native package private protected public short static super synchronized throws transient volatile"),
-  5: makePredicate("class enum extends super const export import"),
-  6: makePredicate("enum await"),
-  strict: makePredicate("implements interface let package private protected public static yield"),
-  strictBind: makePredicate("eval arguments")
+  3: function anonymous(str) {
+switch(str.length){case 6:switch(str){case "double":case "export":case "import":case "native":case "public":case "static":case "throws":return true}return false;case 4:switch(str){case "byte":case "char":case "enum":case "goto":case "long":return true}return false;case 5:switch(str){case "class":case "final":case "float":case "short":case "super":return true}return false;case 7:switch(str){case "boolean":case "extends":case "package":case "private":return true}return false;case 9:switch(str){case "interface":case "protected":case "transient":return true}return false;case 8:switch(str){case "abstract":case "volatile":return true}return false;case 10:return str === "implements";case 3:return str === "int";case 12:return str === "synchronized";}
+},
+  5: function anonymous(str) {
+switch(str.length){case 5:switch(str){case "class":case "super":case "const":return true}return false;case 6:switch(str){case "export":case "import":return true}return false;case 4:return str === "enum";case 7:return str === "extends";}
+},
+  6: function anonymous(str) {
+switch(str){case "enum":case "await":return true}return false;
+},
+  strict: function anonymous(str) {
+switch(str.length){case 9:switch(str){case "interface":case "protected":return true}return false;case 7:switch(str){case "package":case "private":return true}return false;case 6:switch(str){case "public":case "static":return true}return false;case 10:return str === "implements";case 3:return str === "let";case 5:return str === "yield";}
+},
+  strictBind: function anonymous(str) {
+switch(str){case "eval":case "arguments":return true}return false;
+}
 };
 
 exports.reservedWords = reservedWords;
@@ -1005,8 +971,12 @@ exports.reservedWords = reservedWords;
 var ecma5AndLessKeywords = "break case catch continue debugger default do else finally for function if return switch throw try var while with null true false instanceof typeof void delete new in this";
 
 var keywords = {
-  5: makePredicate(ecma5AndLessKeywords),
-  6: makePredicate(ecma5AndLessKeywords + " let const class extends export import yield super")
+  5: function anonymous(str) {
+switch(str.length){case 4:switch(str){case "case":case "else":case "with":case "null":case "true":case "void":case "this":return true}return false;case 5:switch(str){case "break":case "catch":case "throw":case "while":case "false":return true}return false;case 3:switch(str){case "for":case "try":case "var":case "new":return true}return false;case 6:switch(str){case "return":case "switch":case "typeof":case "delete":return true}return false;case 8:switch(str){case "continue":case "debugger":case "function":return true}return false;case 2:switch(str){case "do":case "if":case "in":return true}return false;case 7:switch(str){case "default":case "finally":return true}return false;case 10:return str === "instanceof";}
+},
+  6: function anonymous(str) {
+switch(str.length){case 5:switch(str){case "break":case "catch":case "throw":case "while":case "false":case "const":case "class":case "yield":case "super":return true}return false;case 4:switch(str){case "case":case "else":case "with":case "null":case "true":case "void":case "this":return true}return false;case 6:switch(str){case "return":case "switch":case "typeof":case "delete":case "export":case "import":return true}return false;case 3:switch(str){case "for":case "try":case "var":case "new":case "let":return true}return false;case 8:switch(str){case "continue":case "debugger":case "function":return true}return false;case 7:switch(str){case "default":case "finally":case "extends":return true}return false;case 2:switch(str){case "do":case "if":case "in":return true}return false;case 10:return str === "instanceof";}
+}
 };
 
 exports.keywords = keywords;
@@ -1018,8 +988,8 @@ exports.keywords = keywords;
 // code point above 128.
 // Generated by `tools/generate-identifier-regex.js`.
 
-var nonASCIIidentifierStartChars = "\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0-\u08B2\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58\u0C59\u0C60\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D60\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19C1-\u19C7\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2E2F\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA7AD\uA7B0\uA7B1\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB5F\uAB64\uAB65\uABC0-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC";
-  var nonASCIIidentifierChars = "\u0300-\u036F\u0483-\u0487\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u0610-\u061A\u064B-\u0669\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u06F0-\u06F9\u0711\u0730-\u074A\u07A6-\u07B0\u07C0-\u07C9\u07EB-\u07F3\u0816-\u0819\u081B-\u0823\u0825-\u0827\u0829-\u082D\u0859-\u085B\u08E4-\u0903\u093A-\u093C\u093E-\u094F\u0951-\u0957\u0962\u0963\u0966-\u096F\u0981-\u0983\u09BC\u09BE-\u09C4\u09C7\u09C8\u09CB-\u09CD\u09D7\u09E2\u09E3\u09E6-\u09EF\u0A01-\u0A03\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A66-\u0A71\u0A75\u0A81-\u0A83\u0ABC\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AE2\u0AE3\u0AE6-\u0AEF\u0B01-\u0B03\u0B3C\u0B3E-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B62\u0B63\u0B66-\u0B6F\u0B82\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C62\u0C63\u0C66-\u0C6F\u0C81-\u0C83\u0CBC\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CE2\u0CE3\u0CE6-\u0CEF\u0D01-\u0D03\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D57\u0D62\u0D63\u0D66-\u0D6F\u0D82\u0D83\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E31\u0E34-\u0E3A\u0E47-\u0E4E\u0E50-\u0E59\u0EB1\u0EB4-\u0EB9\u0EBB\u0EBC\u0EC8-\u0ECD\u0ED0-\u0ED9\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E\u0F3F\u0F71-\u0F84\u0F86\u0F87\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u102B-\u103E\u1040-\u1049\u1056-\u1059\u105E-\u1060\u1062-\u1064\u1067-\u106D\u1071-\u1074\u1082-\u108D\u108F-\u109D\u135D-\u135F\u1712-\u1714\u1732-\u1734\u1752\u1753\u1772\u1773\u17B4-\u17D3\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u18A9\u1920-\u192B\u1930-\u193B\u1946-\u194F\u19B0-\u19C0\u19C8\u19C9\u19D0-\u19D9\u1A17-\u1A1B\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AB0-\u1ABD\u1B00-\u1B04\u1B34-\u1B44\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1B82\u1BA1-\u1BAD\u1BB0-\u1BB9\u1BE6-\u1BF3\u1C24-\u1C37\u1C40-\u1C49\u1C50-\u1C59\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CED\u1CF2-\u1CF4\u1CF8\u1CF9\u1DC0-\u1DF5\u1DFC-\u1DFF\u200C\u200D\u203F\u2040\u2054\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2CEF-\u2CF1\u2D7F\u2DE0-\u2DFF\u302A-\u302F\u3099\u309A\uA620-\uA629\uA66F\uA674-\uA67D\uA69F\uA6F0\uA6F1\uA802\uA806\uA80B\uA823-\uA827\uA880\uA881\uA8B4-\uA8C4\uA8D0-\uA8D9\uA8E0-\uA8F1\uA900-\uA909\uA926-\uA92D\uA947-\uA953\uA980-\uA983\uA9B3-\uA9C0\uA9D0-\uA9D9\uA9E5\uA9F0-\uA9F9\uAA29-\uAA36\uAA43\uAA4C\uAA4D\uAA50-\uAA59\uAA7B-\uAA7D\uAAB0\uAAB2-\uAAB4\uAAB7\uAAB8\uAABE\uAABF\uAAC1\uAAEB-\uAAEF\uAAF5\uAAF6\uABE3-\uABEA\uABEC\uABED\uABF0-\uABF9\uFB1E\uFE00-\uFE0F\uFE20-\uFE2D\uFE33\uFE34\uFE4D-\uFE4F\uFF10-\uFF19\uFF3F";
+var nonASCIIidentifierStartChars = "ªµºÀ-ÖØ-öø-ˁˆ-ˑˠ-ˤˬˮͰ-ʹͶͷͺ-ͽͿΆΈ-ΊΌΎ-ΡΣ-ϵϷ-ҁҊ-ԯԱ-Ֆՙա-ևא-תװ-ײؠ-يٮٯٱ-ۓەۥۦۮۯۺ-ۼۿܐܒ-ܯݍ-ޥޱߊ-ߪߴߵߺࠀ-ࠕࠚࠤࠨࡀ-ࡘࢠ-ࢲऄ-हऽॐक़-ॡॱ-ঀঅ-ঌএঐও-নপ-রলশ-হঽৎড়ঢ়য়-ৡৰৱਅ-ਊਏਐਓ-ਨਪ-ਰਲਲ਼ਵਸ਼ਸਹਖ਼-ੜਫ਼ੲ-ੴઅ-ઍએ-ઑઓ-નપ-રલળવ-હઽૐૠૡଅ-ଌଏଐଓ-ନପ-ରଲଳଵ-ହଽଡ଼ଢ଼ୟ-ୡୱஃஅ-ஊஎ-ஐஒ-கஙசஜஞடணதந-பம-ஹௐఅ-ఌఎ-ఐఒ-నప-హఽౘౙౠౡಅ-ಌಎ-ಐಒ-ನಪ-ಳವ-ಹಽೞೠೡೱೲഅ-ഌഎ-ഐഒ-ഺഽൎൠൡൺ-ൿඅ-ඖක-නඳ-රලව-ෆก-ะาำเ-ๆກຂຄງຈຊຍດ-ທນ-ຟມ-ຣລວສຫອ-ະາຳຽເ-ໄໆໜ-ໟༀཀ-ཇཉ-ཬྈ-ྌက-ဪဿၐ-ၕၚ-ၝၡၥၦၮ-ၰၵ-ႁႎႠ-ჅჇჍა-ჺჼ-ቈቊ-ቍቐ-ቖቘቚ-ቝበ-ኈኊ-ኍነ-ኰኲ-ኵኸ-ኾዀዂ-ዅወ-ዖዘ-ጐጒ-ጕጘ-ፚᎀ-ᎏᎠ-Ᏼᐁ-ᙬᙯ-ᙿᚁ-ᚚᚠ-ᛪᛮ-ᛸᜀ-ᜌᜎ-ᜑᜠ-ᜱᝀ-ᝑᝠ-ᝬᝮ-ᝰក-ឳៗៜᠠ-ᡷᢀ-ᢨᢪᢰ-ᣵᤀ-ᤞᥐ-ᥭᥰ-ᥴᦀ-ᦫᧁ-ᧇᨀ-ᨖᨠ-ᩔᪧᬅ-ᬳᭅ-ᭋᮃ-ᮠᮮᮯᮺ-ᯥᰀ-ᰣᱍ-ᱏᱚ-ᱽᳩ-ᳬᳮ-ᳱᳵᳶᴀ-ᶿḀ-ἕἘ-Ἕἠ-ὅὈ-Ὅὐ-ὗὙὛὝὟ-ώᾀ-ᾴᾶ-ᾼιῂ-ῄῆ-ῌῐ-ΐῖ-Ίῠ-Ῥῲ-ῴῶ-ῼⁱⁿₐ-ₜℂℇℊ-ℓℕ℘-ℝℤΩℨK-ℹℼ-ℿⅅ-ⅉⅎⅠ-ↈⰀ-Ⱞⰰ-ⱞⱠ-ⳤⳫ-ⳮⳲⳳⴀ-ⴥⴧⴭⴰ-ⵧⵯⶀ-ⶖⶠ-ⶦⶨ-ⶮⶰ-ⶶⶸ-ⶾⷀ-ⷆⷈ-ⷎⷐ-ⷖⷘ-ⷞ々-〇〡-〩〱-〵〸-〼ぁ-ゖ゛-ゟァ-ヺー-ヿㄅ-ㄭㄱ-ㆎㆠ-ㆺㇰ-ㇿ㐀-䶵一-鿌ꀀ-ꒌꓐ-ꓽꔀ-ꘌꘐ-ꘟꘪꘫꙀ-ꙮꙿ-ꚝꚠ-ꛯꜗ-ꜟꜢ-ꞈꞋ-ꞎꞐ-ꞭꞰꞱꟷ-ꠁꠃ-ꠅꠇ-ꠊꠌ-ꠢꡀ-ꡳꢂ-ꢳꣲ-ꣷꣻꤊ-ꤥꤰ-ꥆꥠ-ꥼꦄ-ꦲꧏꧠ-ꧤꧦ-ꧯꧺ-ꧾꨀ-ꨨꩀ-ꩂꩄ-ꩋꩠ-ꩶꩺꩾ-ꪯꪱꪵꪶꪹ-ꪽꫀꫂꫛ-ꫝꫠ-ꫪꫲ-ꫴꬁ-ꬆꬉ-ꬎꬑ-ꬖꬠ-ꬦꬨ-ꬮꬰ-ꭚꭜ-ꭟꭤꭥꯀ-ꯢ가-힣ힰ-ퟆퟋ-ퟻ豈-舘並-龎ﬀ-ﬆﬓ-ﬗיִײַ-ﬨשׁ-זּטּ-לּמּנּסּףּפּצּ-ﮱﯓ-ﴽﵐ-ﶏﶒ-ﷇﷰ-ﷻﹰ-ﹴﹶ-ﻼＡ-Ｚａ-ｚｦ-ﾾￂ-ￇￊ-ￏￒ-ￗￚ-ￜ";
+var nonASCIIidentifierChars = "‌‍·̀-ͯ·҃-֑҇-ׇֽֿׁׂׅׄؐ-ًؚ-٩ٰۖ-ۜ۟-۪ۤۧۨ-ۭ۰-۹ܑܰ-݊ަ-ް߀-߉߫-߳ࠖ-࠙ࠛ-ࠣࠥ-ࠧࠩ-࡙࠭-࡛ࣤ-ःऺ-़ा-ॏ॑-ॗॢॣ०-९ঁ-ঃ়া-ৄেৈো-্ৗৢৣ০-৯ਁ-ਃ਼ਾ-ੂੇੈੋ-੍ੑ੦-ੱੵઁ-ઃ઼ા-ૅે-ૉો-્ૢૣ૦-૯ଁ-ଃ଼ା-ୄେୈୋ-୍ୖୗୢୣ୦-୯ஂா-ூெ-ைொ-்ௗ௦-௯ఀ-ఃా-ౄె-ైొ-్ౕౖౢౣ౦-౯ಁ-ಃ಼ಾ-ೄೆ-ೈೊ-್ೕೖೢೣ೦-೯ഁ-ഃാ-ൄെ-ൈൊ-്ൗൢൣ൦-൯ංඃ්ා-ුූෘ-ෟ෦-෯ෲෳัิ-ฺ็-๎๐-๙ັິ-ູົຼ່-ໍ໐-໙༘༙༠-༩༹༵༷༾༿ཱ-྄྆྇ྍ-ྗྙ-ྼ࿆ါ-ှ၀-၉ၖ-ၙၞ-ၠၢ-ၤၧ-ၭၱ-ၴႂ-ႍႏ-ႝ፝-፟፩-፱ᜒ-᜔ᜲ-᜴ᝒᝓᝲᝳ឴-៓៝០-៩᠋-᠍᠐-᠙ᢩᤠ-ᤫᤰ-᤻᥆-᥏ᦰ-ᧀᧈᧉ᧐-᧚ᨗ-ᨛᩕ-ᩞ᩠-᩿᩼-᪉᪐-᪙᪰-᪽ᬀ-ᬄ᬴-᭄᭐-᭙᭫-᭳ᮀ-ᮂᮡ-ᮭ᮰-᮹᯦-᯳ᰤ-᰷᱀-᱉᱐-᱙᳐-᳔᳒-᳨᳭ᳲ-᳴᳸᳹᷀-᷵᷼-᷿‿⁀⁔⃐-⃥⃜⃡-⃰⳯-⵿⳱ⷠ-〪ⷿ-゙゚〯꘠-꘩꙯ꙴ-꙽ꚟ꛰꛱ꠂ꠆ꠋꠣ-ꠧꢀꢁꢴ-꣄꣐-꣙꣠-꣱꤀-꤉ꤦ-꤭ꥇ-꥓ꦀ-ꦃ꦳-꧀꧐-꧙ꧥ꧰-꧹ꨩ-ꨶꩃꩌꩍ꩐-꩙ꩻ-ꩽꪰꪲ-ꪴꪷꪸꪾ꪿꫁ꫫ-ꫯꫵ꫶ꯣ-ꯪ꯬꯭꯰-꯹ﬞ︀-️︠-︭︳︴﹍-﹏０-９＿";
 
 var nonASCIIidentifierStart = new RegExp("[" + nonASCIIidentifierStartChars + "]");
 var nonASCIIidentifier = new RegExp("[" + nonASCIIidentifierStartChars + nonASCIIidentifierChars + "]");
@@ -1085,7 +1055,7 @@ function isIdentifierChar(code, astral) {
   }return isInAstralSet(code, astralIdentifierStartCodes) || isInAstralSet(code, astralIdentifierCodes);
 }
 
-},{}],4:[function(require,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -1103,9 +1073,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var lineBreakG = require("./whitespace").lineBreakG;
+var lineBreakG = _dereq_("./whitespace").lineBreakG;
 
 // These are used when `options.locations` is on, for the
 // `startLoc` and `endLoc` properties.
@@ -1174,16 +1144,16 @@ pp.markPosition = function () {
   return this.options.locations ? [this.start, this.startLoc] : this.start;
 };
 
-},{"./state":9,"./whitespace":15}],5:[function(require,module,exports){
+},{"./state":9,"./whitespace":15}],5:[function(_dereq_,module,exports){
 "use strict";
 
-var tt = require("./tokentype").types;
+var tt = _dereq_("./tokentype").types;
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var reservedWords = require("./identifier").reservedWords;
+var reservedWords = _dereq_("./identifier").reservedWords;
 
-var has = require("./util").has;
+var has = _dereq_("./util").has;
 
 var pp = Parser.prototype;
 
@@ -1367,7 +1337,7 @@ pp.checkLVal = function (expr, isBinding, checkClashes) {
   }
 };
 
-},{"./identifier":3,"./state":9,"./tokentype":13,"./util":14}],6:[function(require,module,exports){
+},{"./identifier":3,"./state":9,"./tokentype":13,"./util":14}],6:[function(_dereq_,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -1376,9 +1346,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var SourceLocation = require("./location").SourceLocation;
+var SourceLocation = _dereq_("./location").SourceLocation;
 
 // Start an AST node, attaching a start offset.
 
@@ -1432,7 +1402,7 @@ pp.finishNodeAt = function (node, type, pos) {
   return node;
 };
 
-},{"./location":4,"./state":9}],7:[function(require,module,exports){
+},{"./location":4,"./state":9}],7:[function(_dereq_,module,exports){
 
 
 // Interpret and default an options object
@@ -1444,12 +1414,12 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _util = require("./util");
+var _util = _dereq_("./util");
 
 var has = _util.has;
 var isArray = _util.isArray;
 
-var SourceLocation = require("./location").SourceLocation;
+var SourceLocation = _dereq_("./location").SourceLocation;
 
 // A second optional argument can be given to further configure
 // the parser process. These options are recognized:
@@ -1565,14 +1535,14 @@ function pushComment(options, array) {
   };
 }
 
-},{"./location":4,"./util":14}],8:[function(require,module,exports){
+},{"./location":4,"./util":14}],8:[function(_dereq_,module,exports){
 "use strict";
 
-var tt = require("./tokentype").types;
+var tt = _dereq_("./tokentype").types;
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var lineBreak = require("./whitespace").lineBreak;
+var lineBreak = _dereq_("./whitespace").lineBreak;
 
 var pp = Parser.prototype;
 
@@ -1655,7 +1625,7 @@ pp.unexpected = function (pos) {
   this.raise(pos != null ? pos : this.start, "Unexpected token");
 };
 
-},{"./state":9,"./tokentype":13,"./whitespace":15}],9:[function(require,module,exports){
+},{"./state":9,"./tokentype":13,"./whitespace":15}],9:[function(_dereq_,module,exports){
 "use strict";
 
 exports.Parser = Parser;
@@ -1663,12 +1633,12 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _identifier = require("./identifier");
+var _identifier = _dereq_("./identifier");
 
 var reservedWords = _identifier.reservedWords;
 var keywords = _identifier.keywords;
 
-var _tokentype = require("./tokentype");
+var _tokentype = _dereq_("./tokentype");
 
 var tt = _tokentype.types;
 var lineBreak = _tokentype.lineBreak;
@@ -1743,14 +1713,14 @@ Parser.prototype.loadPlugins = function (plugins) {
   }
 };
 
-},{"./identifier":3,"./tokentype":13}],10:[function(require,module,exports){
+},{"./identifier":3,"./tokentype":13}],10:[function(_dereq_,module,exports){
 "use strict";
 
-var tt = require("./tokentype").types;
+var tt = _dereq_("./tokentype").types;
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var lineBreak = require("./whitespace").lineBreak;
+var lineBreak = _dereq_("./whitespace").lineBreak;
 
 var pp = Parser.prototype;
 
@@ -2321,7 +2291,7 @@ pp.parseImportSpecifiers = function () {
   return nodes;
 };
 
-},{"./state":9,"./tokentype":13,"./whitespace":15}],11:[function(require,module,exports){
+},{"./state":9,"./tokentype":13,"./whitespace":15}],11:[function(_dereq_,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -2333,11 +2303,11 @@ Object.defineProperty(exports, "__esModule", {
 // given point in the program is loosely based on sweet.js' approach.
 // See https://github.com/mozilla/sweet.js/wiki/design
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var tt = require("./tokentype").types;
+var tt = _dereq_("./tokentype").types;
 
-var lineBreak = require("./whitespace").lineBreak;
+var lineBreak = _dereq_("./whitespace").lineBreak;
 
 var TokContext = exports.TokContext = function TokContext(token, isExpr, preserveSpace, override) {
   _classCallCheck(this, TokContext);
@@ -2430,7 +2400,7 @@ tt.backQuote.updateContext = function () {
 
 // tokExprAllowed stays unchanged
 
-},{"./state":9,"./tokentype":13,"./whitespace":15}],12:[function(require,module,exports){
+},{"./state":9,"./tokentype":13,"./whitespace":15}],12:[function(_dereq_,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -2439,21 +2409,21 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _identifier = require("./identifier");
+var _identifier = _dereq_("./identifier");
 
 var isIdentifierStart = _identifier.isIdentifierStart;
 var isIdentifierChar = _identifier.isIdentifierChar;
 
-var _tokentype = require("./tokentype");
+var _tokentype = _dereq_("./tokentype");
 
 var tt = _tokentype.types;
 var keywordTypes = _tokentype.keywords;
 
-var Parser = require("./state").Parser;
+var Parser = _dereq_("./state").Parser;
 
-var SourceLocation = require("./location").SourceLocation;
+var SourceLocation = _dereq_("./location").SourceLocation;
 
-var _whitespace = require("./whitespace");
+var _whitespace = _dereq_("./whitespace");
 
 var lineBreak = _whitespace.lineBreak;
 var lineBreakG = _whitespace.lineBreakG;
@@ -3174,7 +3144,7 @@ pp.readWord = function () {
   return this.finishToken(type, word);
 };
 
-},{"./identifier":3,"./location":4,"./state":9,"./tokentype":13,"./whitespace":15}],13:[function(require,module,exports){
+},{"./identifier":3,"./location":4,"./state":9,"./tokentype":13,"./whitespace":15}],13:[function(_dereq_,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -3332,7 +3302,7 @@ kw("typeof", { beforeExpr: true, prefix: true, startsExpr: true });
 kw("void", { beforeExpr: true, prefix: true, startsExpr: true });
 kw("delete", { beforeExpr: true, prefix: true, startsExpr: true });
 
-},{}],14:[function(require,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 "use strict";
 
 exports.isArray = isArray;
@@ -3352,7 +3322,7 @@ function has(obj, propName) {
   return Object.prototype.hasOwnProperty.call(obj, propName);
 }
 
-},{}],15:[function(require,module,exports){
+},{}],15:[function(_dereq_,module,exports){
 "use strict";
 
 exports.isNewLine = isNewLine;
@@ -3383,7 +3353,7 @@ exports.nonASCIIwhitespace = nonASCIIwhitespace;
 
 //#region acorn/dist/acorn_loose.js
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.acorn || (g.acorn = {})).loose = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.acorn || (g.acorn = {})).loose = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 "use strict";
 
 var _interopRequireWildcard = function (obj) { return obj && obj.__esModule ? obj : { "default": obj }; };
@@ -3423,19 +3393,19 @@ Object.defineProperty(exports, "__esModule", {
 // invasive changes and simplifications without creating a complicated
 // tangle.
 
-var acorn = _interopRequireWildcard(require(".."));
+var acorn = _interopRequireWildcard(_dereq_(".."));
 
-var _state = require("./state");
+var _state = _dereq_("./state");
 
 var LooseParser = _state.LooseParser;
 
-require("./tokenize");
+_dereq_("./tokenize");
 
-require("./parseutil");
+_dereq_("./parseutil");
 
-require("./statement");
+_dereq_("./statement");
 
-require("./expression");
+_dereq_("./expression");
 
 exports.LooseParser = _state.LooseParser;
 
@@ -3450,32 +3420,36 @@ function parse_dammit(input, options) {
 acorn.parse_dammit = parse_dammit;
 acorn.LooseParser = LooseParser;
 
-},{"..":2,"./expression":3,"./parseutil":4,"./state":5,"./statement":6,"./tokenize":7}],2:[function(require,module,exports){
+},{"..":2,"./expression":3,"./parseutil":4,"./state":5,"./statement":6,"./tokenize":7}],2:[function(_dereq_,module,exports){
 "use strict";
 
-module.exports = typeof window != "undefined" ? window.acorn : require(("suppress", "./acorn"));
+module.exports = typeof acorn != "undefined" ? acorn : _dereq_("./acorn");
 
-},{}],3:[function(require,module,exports){
+},{}],3:[function(_dereq_,module,exports){
 "use strict";
 
-var LooseParser = require("./state").LooseParser;
+var LooseParser = _dereq_("./state").LooseParser;
 
-var isDummy = require("./parseutil").isDummy;
+var isDummy = _dereq_("./parseutil").isDummy;
 
-var tt = require("..").tokTypes;
+var tt = _dereq_("..").tokTypes;
 
 var lp = LooseParser.prototype;
 
-lp.checkLVal = function (expr) {
+lp.checkLVal = function (expr, binding) {
   if (!expr) return expr;
   switch (expr.type) {
     case "Identifier":
+      return expr;
+
     case "MemberExpression":
+      return binding ? this.dummyIdent() : expr;
+
     case "ObjectPattern":
     case "ArrayPattern":
     case "RestElement":
     case "AssignmentPattern":
-      return expr;
+      if (this.options.ecmaVersion >= 6) return expr;
 
     default:
       return this.dummyIdent();
@@ -3616,7 +3590,6 @@ lp.parseSubscripts = function (base, start, noCalls, startIndent, line) {
       this.expect(tt.bracketR);
       base = this.finishNode(node, "MemberExpression");
     } else if (!noCalls && this.tok.type == tt.parenL) {
-      this.pushCx();
       var node = this.startNodeAt(start);
       node.callee = base;
       node.arguments = this.parseExprList(tt.parenR);
@@ -3687,7 +3660,6 @@ lp.parseExprAtom = function () {
 
     case tt.bracketL:
       node = this.startNode();
-      this.pushCx();
       node.elements = this.parseExprList(tt.bracketR, true);
       return this.finishNode(node, "ArrayExpression");
 
@@ -3738,7 +3710,6 @@ lp.parseNew = function () {
   var start = this.storeCurrentPos();
   node.callee = this.parseSubscripts(this.parseExprAtom(), start, true, startIndent, line);
   if (this.tok.type == tt.parenL) {
-    this.pushCx();
     node.arguments = this.parseExprList(tt.parenR);
   } else {
     node.arguments = [];
@@ -3884,24 +3855,24 @@ lp.initFunction = function (node) {
 // Convert existing expression atom to assignable pattern
 // if possible.
 
-lp.toAssignable = function (node) {
+lp.toAssignable = function (node, binding) {
   if (this.options.ecmaVersion >= 6 && node) {
     switch (node.type) {
       case "ObjectExpression":
         node.type = "ObjectPattern";
         var props = node.properties;
         for (var i = 0; i < props.length; i++) {
-          this.toAssignable(props[i].value);
+          this.toAssignable(props[i].value, binding);
         }break;
 
       case "ArrayExpression":
         node.type = "ArrayPattern";
-        this.toAssignableList(node.elements);
+        this.toAssignableList(node.elements, binding);
         break;
 
       case "SpreadElement":
         node.type = "RestElement";
-        node.argument = this.toAssignable(node.argument);
+        node.argument = this.toAssignable(node.argument, binding);
         break;
 
       case "AssignmentExpression":
@@ -3909,19 +3880,18 @@ lp.toAssignable = function (node) {
         break;
     }
   }
-  return this.checkLVal(node);
+  return this.checkLVal(node, binding);
 };
 
-lp.toAssignableList = function (exprList) {
+lp.toAssignableList = function (exprList, binding) {
   for (var i = 0; i < exprList.length; i++) {
-    this.toAssignable(exprList[i]);
+    exprList[i] = this.toAssignable(exprList[i], binding);
   }return exprList;
 };
 
 lp.parseFunctionParams = function (params) {
-  this.pushCx();
   params = this.parseExprList(tt.parenR);
-  return this.toAssignableList(params);
+  return this.toAssignableList(params, true);
 };
 
 lp.parseMethod = function (isGenerator) {
@@ -3936,13 +3906,14 @@ lp.parseMethod = function (isGenerator) {
 
 lp.parseArrowExpression = function (node, params) {
   this.initFunction(node);
-  node.params = this.toAssignableList(params);
+  node.params = this.toAssignableList(params, true);
   node.expression = this.tok.type !== tt.braceL;
   node.body = node.expression ? this.parseMaybeAssign() : this.parseBlock();
   return this.finishNode(node, "ArrowFunctionExpression");
 };
 
 lp.parseExprList = function (close, allowEmpty) {
+  this.pushCx();
   var indent = this.curIndent,
       line = this.curLineStart,
       elts = [];
@@ -3971,7 +3942,7 @@ lp.parseExprList = function (close, allowEmpty) {
   return elts;
 };
 
-},{"..":2,"./parseutil":4,"./state":5}],4:[function(require,module,exports){
+},{"..":2,"./parseutil":4,"./state":5}],4:[function(_dereq_,module,exports){
 "use strict";
 
 exports.isDummy = isDummy;
@@ -3979,9 +3950,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var LooseParser = require("./state").LooseParser;
+var LooseParser = _dereq_("./state").LooseParser;
 
-var _ = require("..");
+var _ = _dereq_("..");
 
 var Node = _.Node;
 var SourceLocation = _.SourceLocation;
@@ -4104,7 +4075,7 @@ lp.tokenStartsLine = function () {
   return true;
 };
 
-},{"..":2,"./state":5}],5:[function(require,module,exports){
+},{"..":2,"./state":5}],5:[function(_dereq_,module,exports){
 "use strict";
 
 exports.LooseParser = LooseParser;
@@ -4112,7 +4083,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _ = require("..");
+var _ = _dereq_("..");
 
 var tokenizer = _.tokenizer;
 var SourceLocation = _.SourceLocation;
@@ -4134,14 +4105,14 @@ function LooseParser(input, options) {
   this.nextLineStart = this.lineEnd(this.curLineStart) + 1;
 }
 
-},{"..":2}],6:[function(require,module,exports){
+},{"..":2}],6:[function(_dereq_,module,exports){
 "use strict";
 
-var LooseParser = require("./state").LooseParser;
+var LooseParser = _dereq_("./state").LooseParser;
 
-var isDummy = require("./parseutil").isDummy;
+var isDummy = _dereq_("./parseutil").isDummy;
 
-var _ = require("..");
+var _ = _dereq_("..");
 
 var getLineInfo = _.getLineInfo;
 var tt = _.tokTypes;
@@ -4268,7 +4239,7 @@ lp.parseStatement = function () {
         var clause = this.startNode();
         this.next();
         this.expect(tt.parenL);
-        clause.param = this.toAssignable(this.parseExprAtom());
+        clause.param = this.toAssignable(this.parseExprAtom(), true);
         this.expect(tt.parenR);
         clause.guard = null;
         clause.body = this.parseBlock();
@@ -4371,7 +4342,7 @@ lp.parseVar = function (noIn) {
   node.declarations = [];
   do {
     var decl = this.startNode();
-    decl.id = this.options.ecmaVersion >= 6 ? this.toAssignable(this.parseExprAtom()) : this.parseIdent();
+    decl.id = this.options.ecmaVersion >= 6 ? this.toAssignable(this.parseExprAtom(), true) : this.parseIdent();
     decl.init = this.eat(tt.eq) ? this.parseMaybeAssign(noIn) : null;
     node.declarations.push(this.finishNode(decl, "VariableDeclarator"));
   } while (this.eat(tt.comma));
@@ -4568,10 +4539,10 @@ lp.parseExportSpecifierList = function () {
   return elts;
 };
 
-},{"..":2,"./parseutil":4,"./state":5}],7:[function(require,module,exports){
+},{"..":2,"./parseutil":4,"./state":5}],7:[function(_dereq_,module,exports){
 "use strict";
 
-var _ = require("..");
+var _ = _dereq_("..");
 
 var tt = _.tokTypes;
 var Token = _.Token;
@@ -4580,7 +4551,7 @@ var SourceLocation = _.SourceLocation;
 var getLineInfo = _.getLineInfo;
 var lineBreakG = _.lineBreakG;
 
-var LooseParser = require("./state").LooseParser;
+var LooseParser = _dereq_("./state").LooseParser;
 
 var lp = LooseParser.prototype;
 
@@ -4688,7 +4659,7 @@ lp.lookAhead = function (n) {
 
 //#region acorn/dist/walk.js
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.acorn || (g.acorn = {})).walk = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.acorn || (g.acorn = {})).walk = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -20106,7 +20077,7 @@ var def_ecma6 = {
       "!url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable"
     }
   },
-  "RegExp": {    
+  "RegExp": {
     "prototype": {
       "flags": {
         "!type": "string",
