@@ -58,7 +58,6 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                                 "paths": {}
                             },*/
                     },
-                    workerScript: ace.config.moduleUrl('worker/tern'),
                     useWorker: true,
                     /** use a fake worker for tern server that uses sandbox because chrome app cant use eval outside of sandbox (terns acorn parser uses eval)
                      * todo: once new acorn works in web worker can get rid of this by using acorn_csp!
@@ -82,7 +81,6 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
 
                 editor.setOptions({
                     enableTern: userConfig.autocomplete ? ternOptions : false,
-                    ternLocalStringMinLength: 3,
                     enableSnippets: userConfig.autocomplete,
                     enableBasicAutocompletion: userConfig.autocomplete
                 });

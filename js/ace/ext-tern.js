@@ -3,9 +3,7 @@
 /**
  * Ace Tern server configuration (uses worker in separate file)
  */
-ace.define('ace/ext/tern', ['require', 'exports', 'module', 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/editor'],
-
-function(require, exports, module) {
+ace.define('ace/ext/tern', ['require', 'exports', 'module', 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/editor'], function(require, exports, module) {
 
     //#region LoadCompletors_fromLangTools
     var config = require("../config");
@@ -122,25 +120,37 @@ function(require, exports, module) {
 
 
     //#region Tern
-    var ternOptions = {
-        defs: ['jquery', 'browser', 'ecma5'],
-        plugins: {
-            doc_comment: {
-                fullDocs: true
-            }
-        },
-        workerScript: config.moduleUrl('worker/tern'),
-        useWorker: true,
-        switchToDoc: function(name, start) {
-            console.log('switchToDoc called but not defined. name=' + name + '; start=', start);
-        }
-    };
+    var ternOptions = {};
 
     var TernServer = require("../tern").TernServer;
     var aceTs;
-    /** assigns local var aceTs to a new TernServer instance using local var ternOptions */
-    var createTernServer = function() {
-        aceTs = new TernServer(ternOptions);
+    /** 
+     * assigns local var aceTs to a new TernServer instance using local var ternOptions.
+     * Automatically loads tern worker script if not loaded and not using worker (no need to load if useing worker)
+     * @param {function} cb - callback which is called when server is created (because loading tern source may be required)
+     */
+    var createTernServer = function(cb) {
+        var src = config.moduleUrl('worker/tern');
+        //if useWorker was set to false, then load file (because useWorker is default)
+        if (ternOptions.useWorker === false) {
+            var id = 'ace_tern_files';
+            if (document.getElementById(id)) inner();
+            else {
+                var el = document.createElement('script');
+                el.setAttribute('id', id);
+                document.head.appendChild(el);
+                el.onload = inner;
+                el.setAttribute('src', src);
+            }
+        }
+        else inner();
+
+        function inner() {
+            //ensure that workerScript url is passed to tern
+            if (!ternOptions.workerScript) ternOptions.workerScript = src;
+            aceTs = new TernServer(ternOptions);
+            cb();
+        }
     };
 
     //hack: need a better solution to get the editor variable inside of the editor.getSession().selection.onchangeCursor event as the passed variable is of the selection, not the editor. This variable is being set in the enableTern set Option
@@ -187,26 +197,29 @@ function(require, exports, module) {
              * @note - Use this to restart tern with new options by setting to false then true again by passing new options;
              */
             set: function(val) {
+                var self = this;
                 if (typeof val === 'object') {
-                    ternOptions = val; //TODO: perhaps merge options with defaults..
+                    ternOptions = val;
                     val = true;
                 }
                 if (val) {
-                    editor_for_OnCusorChange = this; //hack
-                    createTernServer();
-                    this.completers = completers;
-                    this.ternServer = aceTs;
-                    this.commands.addCommand(Autocomplete.startCommand);
-                    this.getSession().selection.on('changeCursor', onCursorChange_Tern);
-                    this.commands.on('afterExec', onAfterExec_Tern);
-                    aceTs.bindAceKeys(this);
+                    editor_for_OnCusorChange = self; //hack
+                    createTernServer(function() {
+                        self.completers = completers;
+                        self.ternServer = aceTs;
+                        self.commands.addCommand(Autocomplete.startCommand);
+                        self.getSession().selection.on('changeCursor', onCursorChange_Tern);
+                        self.commands.on('afterExec', onAfterExec_Tern);
+                        //becasue this may be async, we provide callback as option
+                        if (ternOptions.startedCb) ternOptions.startedCb();
+                    });
                 }
                 else {
-                    delete this.ternServer;
-                    this.getSession().selection.off('changeCursor', onCursorChange_Tern);
-                    this.commands.off('afterExec', onAfterExec_Tern);
-                    if (!this.enableBasicAutocompletion) {
-                        this.commands.removeCommand(Autocomplete.startCommand);
+                    delete self.ternServer;
+                    self.getSession().selection.off('changeCursor', onCursorChange_Tern);
+                    self.commands.off('afterExec', onAfterExec_Tern);
+                    if (!self.enableBasicAutocompletion) {
+                        self.commands.removeCommand(Autocomplete.startCommand);
                     }
                 }
             },
@@ -263,27 +276,49 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
      */
     var TernServer = function(options) {
         var self = this;
+
+        //merge options with defaults
         this.options = options || {};
+
+        //default plugins
         var plugins = this.options.plugins || (this.options.plugins = {});
-        if (!plugins.doc_comment) {
-            plugins.doc_comment = {
-                fullDocs: true
-            };
-        }
+        if (!plugins.hasOwnProperty('doc_comment')) plugins.doc_comment = {};
+        if (!plugins.doc_comment.hasOwnProperty('fullDocs')) plugins.doc_comment.fullDocs = true; //default to true if not specified
+
+        //default switchToDoc
+        if (this.options.hasOwnProperty('switchToDoc')) this.options.switchToDoc = function(name, start) {
+            console.log('tern.switchToDoc called but not defined (need to specify this in options to enable jumpting between documents). name=' + name + '; start=', start);
+        };
+
+        //default defs
+        if (!this.options.hasOwnProperty('defs')) this.options.defs = [ /*'jquery',*/ 'browser', 'ecma5'];
+
+        //default worker
+        if (!this.options.hasOwnProperty('useWorker')) this.options.useWorker = true;
         if (this.options.useWorker) {
             this.server = new WorkerServer(this, this.options.workerClass);
         }
         else {
-            //  logO(plugins, 'plugins in new tern server');
+            //HACK: defs are hard coded into worker-tern.js file
+            //when using worker, this is handled in the worker-tern.js file instead of here
+            if (this.options.defs && this.options.defs.length > 0) {
+                var tmp = [];
+                for (var i = 0; i < this.options.defs.length; i++) {
+                    tmp.push(eval('def_' + this.options.defs[i]));
+                }
+                this.options.defs = tmp;
+            }
+        
             this.server = new tern.Server({
                 getFile: function(name, c) {
                     return getFile(self, name, c);
                 },
                 async: true,
-                defs: this.options.defs || [],
-                plugins: plugins
+                defs: this.options.defs,
+                plugins: this.options.plugins
             });
         }
+
         this.docs = Object.create(null);
         /**
          * Fired from editor.onChange
