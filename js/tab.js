@@ -18,7 +18,7 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
             this.setFile(file);
         }
         else {
-            this.fileName = "untitled.txt";
+            this.fileName = "untitled.js";
         }
 
         this.modified = false;
@@ -146,7 +146,7 @@ define(["command", "storage/file", "util/manos", "settings!ace,user", "util/temp
             self.setUseWorker(userConfig.useWorker);
         });
         //syntax, however, is sync
-        var syntaxValue = this.syntaxMode || "plain_text";
+        var syntaxValue = this.syntaxMode || "javascript";
         if (this.file) {
             if (this.file.virtual) {
                 //settings files are special
