@@ -124,7 +124,7 @@ ace.define('ace/ext/tern', ['require', 'exports', 'module', 'ace/snippets', 'ace
 
     var TernServer = require("../tern").TernServer;
     var aceTs;
-    /** 
+    /**
      * assigns local var aceTs to a new TernServer instance using local var ternOptions.
      * Automatically loads tern worker script if not loaded and not using worker (no need to load if useing worker)
      * @param {function} cb - callback which is called when server is created (because loading tern source may be required)
@@ -287,7 +287,7 @@ ace.define('ace/tern', ['require', 'exports', 'module', 'ace/lib/dom'], function
         if (!plugins.doc_comment.hasOwnProperty('fullDocs')) plugins.doc_comment.fullDocs = true; //default to true if not specified
 
         //default switchToDoc
-        if (this.options.hasOwnProperty('switchToDoc')) this.options.switchToDoc = function(name, start) {
+        if (!this.options.hasOwnProperty('switchToDoc')) this.options.switchToDoc = function(name, start) {
             console.log('tern.switchToDoc called but not defined (need to specify this in options to enable jumpting between documents). name=' + name + '; start=', start);
         };
 
