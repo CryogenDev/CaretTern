@@ -1,11 +1,13 @@
 <!doctype html>
 <html>
+    
     <head>
         <title>Caret-T</title>
         <meta charset="UTF-8">
         <link rel="stylesheet" type="text/css" href="css/caret.css" id="theme">
         <link rel="stylesheet" type="text/css" href="css/caret-tern.css" id="ternExtraCss">
     </head>
+    
     <body>
         <div class="titlebar">
             <b class="app-name">Caret-T</b>
@@ -42,7 +44,7 @@
         <div class="palette enter">
             <div class="main">
                 <h1 class="mode"></h1>
-                <h2 style="display:none; font-size:10px; color:blue; cursor:pointer;" class="searchAll" >Search in all Javascript files (quick hack) </h2>
+                <h2 style="display:none; font-size:10px; color:blue; cursor:pointer;" class="searchAll">Search in all Javascript files (quick hack)</h2>
                 <h2 style="display:none; font-size:10px; color:grey; " class="searchAllStatus"></h2>
                 <input class="request" />
             </div>
@@ -52,6 +54,8 @@
         <script charset="UTF-8" src="js/ace/ace.js"></script>
         <script charset="UTF-8" data-main="./js/main.js" src="require.js"></script>
         <!-- sandbox -->
-        <iframe id="sandboxFrame" style="display:none;" src="sandbox.html"></iframe>
+        <!--<iframe id="sandboxFrame" style="display:none;" src="sandbox.html"></iframe>-->
+        <webview partition="sandbox" id="sandboxFrame" name="sandbox" style="display:none;" src="sandbox.html"></webview>
     </body>
+
 </html>

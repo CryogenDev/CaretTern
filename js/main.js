@@ -108,7 +108,7 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
             c();
         }, function() {
             if (!cancelled) frame.close();
-        })
+        });
     });
     command.on("app:minimize", function() {
         frame.minimize();
@@ -165,6 +165,7 @@ require(["command", "storage/settingsProvider", "ui/dialog", "sessions", "util/m
     
     //console debugging help
     try{
+        console.info('navigate to chrome://inspect/#apps to get the dev tools for the tern `worker` that is running in a webview, which uses a separate process for performance reasons (sandbox.html)');
         window.DM="";
         console.log("To debug commands, use:\n setDebugMode(\"commandName\"); \n (use full name of command to debug, this will log every time the command is fired)");
         //returns true if global var window.DM equals passed command name

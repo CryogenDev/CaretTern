@@ -11,7 +11,6 @@ var files = [];
 var commands = [];
 
 var openWindow = function() {
-
     //if window exists, re-use it
     if (mainWindow) {
         //attach any new files to the window, and re-trigger "open from launch"
@@ -54,10 +53,9 @@ var openWindow = function() {
             isOpen: true
         });
     });
-}
+};
 
 var launch = function(launchData) {
-
     if (launchData && launchData.items) files.push.apply(files, launchData.items);
     //we delay opening the actual window to give multiple file events time to fire
     if (pending !== null) return;
