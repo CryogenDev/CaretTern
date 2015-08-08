@@ -89,7 +89,7 @@ var ClojureHighlightRules = function() {
         "keyword": keywords,
         "constant.language": buildinConstants,
         "support.function": builtinFunctions
-    }, "identifier", false, " ");
+    }, "identifier", false, " ");
 
     this.$rules = {
         "start" : [
@@ -243,7 +243,7 @@ oop.inherits(Mode, TextMode);
     this.$calculateIndent = function(line, tab) {
         var baseIndent = this.$getIndent(line);
         var delta = 0;
-        var isParen, ch;
+        var isParen, ch;
         for (var i = line.length - 1; i >= 0; i--) {
             ch = line[i];
             if (ch === '(') {
@@ -259,7 +259,7 @@ oop.inherits(Mode, TextMode);
                 break;
             }
         }
-        if (delta < 0 && isParen) {
+        if (delta < 0 && isParen) {
             i += 1;
             var iBefore = i;
             var fn = '';
@@ -277,12 +277,12 @@ oop.inherits(Mode, TextMode);
                 fn += line[i];
                 i++;
             }
-        } else if(delta < 0 && !isParen) {
+        } else if(delta < 0 && !isParen) {
             return this.$toIndent(line.substring(0, i+1));
-        } else if(delta > 0) {
+        } else if(delta > 0) {
             baseIndent = baseIndent.substring(0, baseIndent.length - tab.length);
             return baseIndent;
-        } else {
+        } else {
             return baseIndent;
         }
     };

@@ -7,31 +7,31 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var LatexHighlightRules = function() {  
 
     this.$rules = {
-        "start" : [{
+        "start" : [{
             token : "comment",
             regex : "%.*$"
-        }, {
+        }, {
             token : ["keyword", "lparen", "variable.parameter", "rparen", "lparen", "storage.type", "rparen"],
             regex : "(\\\\(?:documentclass|usepackage|input))(?:(\\[)([^\\]]*)(\\]))?({)([^}]*)(})"
-        }, {
+        }, {
             token : ["keyword","lparen", "variable.parameter", "rparen"],
-            regex : "(\\\\label)(?:({)([^}]*)(}))?"
-        }, {
+            regex : "(\\\\(?:label|v?ref|cite(?:[^{]*)))(?:({)([^}]*)(}))?"
+        }, {
             token : ["storage.type", "lparen", "variable.parameter", "rparen"],
             regex : "(\\\\(?:begin|end))({)(\\w*)(})"
-        }, {
+        }, {
             token : "storage.type",
             regex : "\\\\[a-zA-Z]+"
-        }, {
+        }, {
             token : "lparen",
             regex : "[[({]"
-        }, {
+        }, {
             token : "rparen",
             regex : "[\\])}]"
-        }, {
+        }, {
             token : "constant.character.escape",
             regex : "\\\\[^a-zA-Z]?"
-        }, {
+        }, {
             token : "string",
             regex : "\\${1,2}",
             next  : "equation"

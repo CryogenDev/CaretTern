@@ -13,7 +13,7 @@ var LuaHighlightRules = function() {
 
     var builtinConstants = ("true|false|nil|_G|_VERSION");
 
-    var functions = (
+    var functions = (
         "string|xpcall|package|tostring|print|os|unpack|require|"+
         "getfenv|setmetatable|next|assert|tonumber|io|rawequal|"+
         "collectgarbage|getmetatable|module|rawset|math|debug|"+
@@ -33,7 +33,7 @@ var LuaHighlightRules = function() {
         "gethook|setmetatable|setlocal|traceback|setfenv|getinfo|"+
         "setupvalue|getlocal|getregistry|getfenv|setn|insert|getn|"+
         "foreachi|maxn|foreach|concat|sort|remove|resume|yield|"+
-        "status|wrap|create|running|"+
+        "status|wrap|create|running|"+
         "__add|__sub|__mod|__unm|__concat|__lt|__index|__call|__gc|__metatable|"+
          "__mul|__div|__pow|__len|__eq|__le|__newindex|__tostring|__mode|__tonumber"
     );
@@ -334,7 +334,7 @@ oop.inherits(Mode, TextMode);
     ];
 
     function getNetIndentLevel(tokens) {
-        var level = 0;
+        var level = 0;
         for (var i = 0; i < tokens.length; i++) {
             var token = tokens[i];
             if (token.type == "keyword") {
@@ -346,7 +346,7 @@ oop.inherits(Mode, TextMode);
             } else if (token.type == "paren.rparen") {
                 level --;
             }
-        }
+        }
         if (level < 0) {
             return -1;
         } else if (level > 0) {
@@ -368,7 +368,7 @@ oop.inherits(Mode, TextMode);
         }
         if (level > 0) {
             return indent + tab;
-        } else if (level < 0 && indent.substr(indent.length - tab.length) == tab) {
+        } else if (level < 0 && indent.substr(indent.length - tab.length) == tab) {
             if (!this.checkOutdent(state, line, "\n")) {
                 return indent.substr(0, indent.length - tab.length);
             }
@@ -398,7 +398,7 @@ oop.inherits(Mode, TextMode);
         var tabLength = session.getTabString().length;
         var expectedIndent = prevIndent + tabLength * getNetIndentLevel(prevTokens);
         var curIndent = this.$getIndent(session.getLine(row)).length;
-        if (curIndent < expectedIndent) {
+        if (curIndent < expectedIndent) {
             return;
         }
         session.outdentRows(new Range(row, 0, row + 2, 0));
@@ -408,11 +408,11 @@ oop.inherits(Mode, TextMode);
         var worker = new WorkerClient(["ace"], "ace/mode/lua_worker", "Worker");
         worker.attachToDocument(session.getDocument());
         
-        worker.on("error", function(e) {
-            session.setAnnotations([e.data]);
+        worker.on("annotate", function(e) {
+            session.setAnnotations(e.data);
         });
         
-        worker.on("ok", function(e) {
+        worker.on("terminate", function() {
             session.clearAnnotations();
         });
         

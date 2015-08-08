@@ -4,7 +4,7 @@ var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var stringEscape =  "\\\\(x[0-9A-Fa-f]{2}|[0-7]{3}|[\\\\abfnrtv'\"]|U[0-9A-Fa-f]{8}|u[0-9A-Fa-f]{4})";
 
-var GherkinHighlightRules = function() {
+var GherkinHighlightRules = function() {
     this.$rules = {
     	start : [{
             token: 'constant.numeric',
@@ -68,7 +68,7 @@ var GherkinHighlightRules = function() {
             regex : "[A-Za-z0-9 ]*",
             next  : "start"
         }],
-    };
+    };
     
 }
 

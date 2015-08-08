@@ -45,7 +45,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         defaultFontSize();
 
         //load tern
-        ace.config.loadModule('ace/ext/language_tools', function() {
+        // ace.config.loadModule('ace/ext/language_tools', function() {
             ace.config.loadModule('ace/ext/tern', function() {
                 var ternOptions = {
                     defs: [ /*'jquery',*/ 'browser', 'ecma5' /*, 'ecma6'*/ ],
@@ -198,7 +198,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                     alert('error setting ternRequireJS: ' + ex.toString());
                 }
             });
-        });
+        // });
     }
 
     //#endregion

@@ -8,7 +8,7 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var TexHighlightRules = function(textClass) {
 
     if (!textClass)
-        textClass = "text";
+        textClass = "text";
 
     this.$rules = {
         "start" : [
@@ -25,17 +25,17 @@ var TexHighlightRules = function(textClass) {
 	        }, {
 	            token : "keyword", // command
 	            regex : "\\\\(?:[a-zA-z0-9]+|[^a-zA-z0-9])"
-	        }, {
+	        }, {
                token : "paren.keyword.operator",
 	            regex : "[[({]"
-	        }, {
+	        }, {
                token : "paren.keyword.operator",
 	            regex : "[\\])}]"
 	        }, {
 	            token : textClass,
 	            regex : "\\s+"
 	        }
-        ],
+        ],
         "nospell" : [
            {
                token : "comment",

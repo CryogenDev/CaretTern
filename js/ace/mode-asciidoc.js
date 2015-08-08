@@ -14,7 +14,7 @@ var AsciidocHighlightRules = function() {
             {token: "literal", regex: /^-{4,}\s*$/,   next: "literalBlock"},
             {token: "string",  regex: /^\+{4,}\s*$/,  next: "passthroughBlock"},
             {token: "keyword", regex: /^={4,}\s*$/},
-            {token: "text",    regex: /^\s*$/},
+            {token: "text",    regex: /^\s*$/},
             {token: "empty", regex: "", next: "dissallowDelimitedBlock"}
         ],
 
@@ -30,7 +30,7 @@ var AsciidocHighlightRules = function() {
 
         "paragraphEnd": [
             {token: "doc.comment", regex: /^\/{4,}\s*$/,    next: "commentBlock"},
-            {token: "tableBlock",  regex: /^\s*[|!]=+\s*$/, next: "tableBlock"},
+            {token: "tableBlock",  regex: /^\s*[|!]=+\s*$/, next: "tableBlock"},
             {token: "keyword",     regex: /^(?:--|''')\s*$/, next: "start"},
             {token: "option",      regex: /^\[.*\]\s*$/,     next: "start"},
             {token: "pageBreak",   regex: /^>{3,}$/,         next: "start"},
@@ -38,14 +38,14 @@ var AsciidocHighlightRules = function() {
             {token: "titleUnderline",    regex: /^(?:={2,}|-{2,}|~{2,}|\^{2,}|\+{2,})\s*$/, next: "start"},
             {token: "singleLineTitle",   regex: /^={1,5}\s+\S.*$/, next: "start"},
 
-            {token: "otherBlock",    regex: /^(?:\*{2,}|_{2,})\s*$/, next: "start"},
+            {token: "otherBlock",    regex: /^(?:\*{2,}|_{2,})\s*$/, next: "start"},
             {token: "optionalTitle", regex: /^\.[^.\s].+$/,  next: "start"}
         ],
 
         "listStart": [
             {token: "keyword",  regex: /^\s*(?:\d+\.|[a-zA-Z]\.|[ixvmIXVM]+\)|\*{1,5}|-|\.{1,5})\s/, next: "listText"},
             {token: "meta.tag", regex: /^.+(?::{2,4}|;;)(?: |$)/, next: "listText"},
-            {token: "support.function.list.callout", regex: /^(?:<\d+>|\d+>|>) /, next: "text"},
+            {token: "support.function.list.callout", regex: /^(?:<\d+>|\d+>|>) /, next: "text"},
             {token: "keyword",  regex: /^\+\s*$/, next: "start"}
         ],
 
@@ -58,16 +58,16 @@ var AsciidocHighlightRules = function() {
             {token: "literal", regex:/\+{3,}/, next:"smallPassthrough"},
             {token: "escape", regex: /\((?:C|TM|R)\)|\.{3}|->|<-|=>|<=|&#(?:\d+|x[a-fA-F\d]+);|(?: |^)--(?=\s+\S)/},
             {token: "escape", regex: /\\[_*'`+#]|\\{2}[_*'`+#]{2}/},
-            {token: "keyword", regex: /\s\+$/},
+            {token: "keyword", regex: /\s\+$/},
             {token: "text", regex: identifierRe},
             {token: ["keyword", "string", "keyword"],
                 regex: /(<<[\w\d\-$]+,)(.*?)(>>|$)/},
             {token: "keyword", regex: /<<[\w\d\-$]+,?|>>/},
-            {token: "constant.character", regex: /\({2,3}.*?\){2,3}/},
-            {token: "keyword", regex: /\[\[.+?\]\]/},
+            {token: "constant.character", regex: /\({2,3}.*?\){2,3}/},
+            {token: "keyword", regex: /\[\[.+?\]\]/},
             {token: "support", regex: /^\[{3}[\w\d =\-]+\]{3}/},
 
-            {include: "quotes"},
+            {include: "quotes"},
             {token: "empty", regex: /^\s*$/, next: "start"}
         ],
 
@@ -154,7 +154,7 @@ var AsciidocHighlightRules = function() {
     function quoteRule(ch) {
         var prefix = /\w/.test(ch) ? "\\b" : "(?:\\B|^)";
         return prefix + ch + "[^" + ch + "].*?" + ch + "(?![\\w*])";
-    }
+    }
 
     var tokenMap = {
         macro: "constant.character",

@@ -154,7 +154,7 @@ oop.inherits(FoldMode, BaseFoldMode);
     this.foldingStopMarker = /^[^\[\{]*(\}|\])|^[\s\*]*(\*\/)/;
     this.singleLineBlockCommentRe= /^\s*(\/\*).*\*\/\s*$/;
     this.tripleStarBlockCommentRe = /^\s*(\/\*\*\*).*\*\/\s*$/;
-    this.startRegionRe = /^\s*(\/\*|\/\/)#region\b/;
+    this.startRegionRe = /^\s*(\/\*|\/\/)#?region\b/;
     this._getFoldWidgetBase = this.getFoldWidget;
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
@@ -242,13 +242,12 @@ oop.inherits(FoldMode, BaseFoldMode);
         
         return new Range(startRow, startColumn, endRow, session.getLine(endRow).length);
     };
-    
     this.getCommentRegionBlock = function(session, line, row) {
         var startColumn = line.search(/\s*$/);
         var maxRow = session.getLength();
         var startRow = row;
         
-        var re = /^\s*(?:\/\*|\/\/)#(end)?region\b/;
+        var re = /^\s*(?:\/\*|\/\/|--)#?(end)?region\b/;
         var depth = 1;
         while (++row < maxRow) {
             line = session.getLine(row);
@@ -275,7 +274,7 @@ ace.define("ace/mode/elm",["require","exports","module","ace/lib/oop","ace/mode/
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
-var HighlightRules = require("./elm_highlight_rules").ElmHighlightRules;
+var HighlightRules = require("./elm_highlight_rules").ElmHighlightRules;
 var FoldMode = require("./folding/cstyle").FoldMode;
 
 var Mode = function() {
@@ -286,7 +285,7 @@ oop.inherits(Mode, TextMode);
 
 (function() {
     this.lineCommentStart = "--";
-    this.blockComment = {start: "{-", end: "-}"};
+    this.blockComment = {start: "{-", end: "-}"};
     this.$id = "ace/mode/elm";
 }).call(Mode.prototype);
 

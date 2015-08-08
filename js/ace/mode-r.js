@@ -8,7 +8,7 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var TexHighlightRules = function(textClass) {
 
     if (!textClass)
-        textClass = "text";
+        textClass = "text";
 
     this.$rules = {
         "start" : [
@@ -25,17 +25,17 @@ var TexHighlightRules = function(textClass) {
 	        }, {
 	            token : "keyword", // command
 	            regex : "\\\\(?:[a-zA-z0-9]+|[^a-zA-z0-9])"
-	        }, {
+	        }, {
                token : "paren.keyword.operator",
 	            regex : "[[({]"
-	        }, {
+	        }, {
                token : "paren.keyword.operator",
 	            regex : "[\\])}]"
 	        }, {
 	            token : textClass,
 	            regex : "\\s+"
 	        }
-        ],
+        ],
         "nospell" : [
            {
                token : "comment",
@@ -96,15 +96,15 @@ ace.define("ace/mode/r_highlight_rules",["require","exports","module","ace/lib/o
       var buildinConstants = lang.arrayToMap(
             ("NULL|NA|TRUE|FALSE|T|F|Inf|NaN|NA_integer_|NA_real_|NA_character_|" +
              "NA_complex_").split("|")
-            );
+            );
 
       this.$rules = {
          "start" : [
-            {
+            {
                token : "comment.sectionhead",
                regex : "#+(?!').*(?:----|====|####)\\s*$"
             },
-            {
+            {
                token : "comment",
                regex : "#+'",
                next : "rd-start"
@@ -168,11 +168,11 @@ ace.define("ace/mode/r_highlight_rules",["require","exports","module","ace/lib/o
                token : "keyword.operator", // infix operators
                regex : "%.*?%"
             },
-            {
+            {
                token : "paren.keyword.operator",
                regex : "[[({]"
             },
-            {
+            {
                token : "paren.keyword.operator",
                regex : "[\\])}]"
             },
@@ -205,7 +205,7 @@ ace.define("ace/mode/r_highlight_rules",["require","exports","module","ace/lib/o
          ]
       };
 
-      var rdRules = new TexHighlightRules("comment").getRules();
+      var rdRules = new TexHighlightRules("comment").getRules();
       for (var i = 0; i < rdRules["start"].length; i++) {
          rdRules["start"][i].token += ".virtual-comment";
       }
@@ -295,7 +295,7 @@ ace.define("ace/mode/r",["require","exports","module","ace/range","ace/lib/oop",
 
    (function()
    {
-      this.lineCommentStart = "#";
+      this.lineCommentStart = "#";
        this.$id = "ace/mode/r";
    }).call(Mode.prototype);
    exports.Mode = Mode;

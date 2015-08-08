@@ -138,11 +138,11 @@ ace.define("ace/mode/coffee_highlight_rules",["require","exports","module","ace/
                 }, {
                     token : "punctuation.operator",
                     regex : "\\."
-                }, {
+                }, {
                     token : ["keyword", "text", "language.support.class",
                      "text", "keyword", "text", "language.support.class"],
                     regex : "(class)(\\s+)(" + identifier + ")(?:(\\s+)(extends)(\\s+)(" + identifier + "))?"
-                }, {
+                }, {
                     token : ["entity.name.function", "text", "keyword.operator", "text"].concat(functionRule.token),
                     regex : "(" + identifier + ")(\\s*)([=:])(\\s*)" + functionRule.regex
                 }, 
@@ -285,7 +285,7 @@ oop.inherits(FoldMode, BaseFoldMode);
             var endColumn = session.getLine(endRow).length;
             return new Range(startRow, startColumn, endRow, endColumn);
         }
-    };
+    };
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
         var indent = line.search(/\S/);
@@ -297,7 +297,7 @@ oop.inherits(FoldMode, BaseFoldMode);
         if (indent == -1) {
             session.foldWidgets[row - 1] = prevIndent!= -1 && prevIndent < nextIndent ? "start" : "";
             return "";
-        }
+        }
         if (prevIndent == -1) {
             if (indent == nextIndent && line[indent] == "#" && next[indent] == "#") {
                 session.foldWidgets[row - 1] = "";
@@ -346,7 +346,7 @@ function Mode() {
 
 oop.inherits(Mode, TextMode);
 
-(function() {
+(function() {
     var indenter = /(?:[({[=:]|[-=]>|\b(?:else|try|(?:swi|ca)tch(?:\s+[$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)?|finally))\s*$|^\s*(else\b\s*)?(?:if|for|while|loop)\b(?!.*\bthen\b)/;
     var commentLine = /^(\s*)#/;
     var hereComment = /^\s*###(?!#)/;
@@ -393,11 +393,11 @@ oop.inherits(Mode, TextMode);
         var worker = new WorkerClient(["ace"], "ace/mode/coffee_worker", "Worker");
         worker.attachToDocument(session.getDocument());
         
-        worker.on("error", function(e) {
-            session.setAnnotations([e.data]);
+        worker.on("annotate", function(e) {
+            session.setAnnotations(e.data);
         });
         
-        worker.on("ok", function(e) {
+        worker.on("terminate", function() {
             session.clearAnnotations();
         });
         

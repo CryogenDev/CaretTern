@@ -25,10 +25,10 @@ var PythonHighlightRules = function() {
         "cmp|globals|max|reversed|zip|compile|hasattr|memoryview|round|" +
         "__import__|complex|hash|min|set|apply|delattr|help|next|setattr|" +
         "buffer|dict|hex|object|slice|coerce|dir|id|oct|sorted|intern"
-    );
+    );
     var keywordMapper = this.createKeywordMapper({
         "invalid.deprecated": "debugger",
-        "support.function": builtinFunctions,
+        "support.function": builtinFunctions,
         "constant.language": builtinConstants,
         "keyword": keywords
     }, "identifier");
@@ -237,7 +237,7 @@ oop.inherits(Mode, TextMode);
         var tokens = this.getTokenizer().getLineTokens(line.trim(), state).tokens;
         
         if (!tokens)
-            return false;
+            return false;
         do {
             var last = tokens.pop();
         } while (last && (last.type == "comment" || (last.type == "text" && last.value.match(/^\s+$/))));
@@ -248,7 +248,7 @@ oop.inherits(Mode, TextMode);
         return (last.type == "keyword" && outdents[last.value]);
     };
 
-    this.autoOutdent = function(state, doc, row) {
+    this.autoOutdent = function(state, doc, row) {
         
         row += 1;
         var indent = this.$getIndent(doc.getLine(row));

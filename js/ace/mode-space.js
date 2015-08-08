@@ -43,7 +43,7 @@ oop.inherits(FoldMode, BaseFoldMode);
             var endColumn = session.getLine(endRow).length;
             return new Range(startRow, startColumn, endRow, endColumn);
         }
-    };
+    };
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
         var indent = line.search(/\S/);
@@ -55,7 +55,7 @@ oop.inherits(FoldMode, BaseFoldMode);
         if (indent == -1) {
             session.foldWidgets[row - 1] = prevIndent!= -1 && prevIndent < nextIndent ? "start" : "";
             return "";
-        }
+        }
         if (prevIndent == -1) {
             if (indent == nextIndent && line[indent] == "#" && next[indent] == "#") {
                 session.foldWidgets[row - 1] = "";
@@ -91,7 +91,7 @@ ace.define("ace/mode/space_highlight_rules",["require","exports","module","ace/l
 var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var SpaceHighlightRules = function() {
+var SpaceHighlightRules = function() {
     this.$rules = {
         "start" : [
             {
@@ -142,11 +142,11 @@ exports.SpaceHighlightRules = SpaceHighlightRules;
 
 ace.define("ace/mode/space",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/folding/coffee","ace/mode/space_highlight_rules"], function(require, exports, module) {
 "use strict";
-var oop = require("../lib/oop");
+var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
-var FoldMode = require("./folding/coffee").FoldMode;
+var FoldMode = require("./folding/coffee").FoldMode;
 var SpaceHighlightRules = require("./space_highlight_rules").SpaceHighlightRules;
-var Mode = function() {
+var Mode = function() {
     this.HighlightRules = SpaceHighlightRules;
     this.foldingRules = new FoldMode();
 };

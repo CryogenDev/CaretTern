@@ -647,7 +647,7 @@ oop.inherits(Mode, TextMode);
         var tokens = this.getTokenizer().getLineTokens(line.trim(), state).tokens;
 
         if (!tokens)
-            return false;
+            return false;
         do {
             var last = tokens.pop();
         } while (last && (last.type == "comment" || (last.type == "text" && last.value.match(/^\s+$/))));
@@ -658,7 +658,7 @@ oop.inherits(Mode, TextMode);
         return (last.type == "keyword" && outdents[last.value]);
     };
 
-    this.autoOutdent = function(state, doc, row) {
+    this.autoOutdent = function(state, doc, row) {
 
         row += 1;
         var indent = this.$getIndent(doc.getLine(row));

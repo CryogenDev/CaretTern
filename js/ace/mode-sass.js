@@ -53,14 +53,14 @@ var ScssHighlightRules = function() {
             "stress|table-layout|text-align|text-decoration|text-indent|" +
             "text-shadow|text-transform|top|unicode-bidi|vertical-align|" +
             "visibility|voice-family|volume|white-space|widows|width|word-spacing|" +
-            "z-index").split("|");
-        var ret = [];
+            "z-index").split("|");
+        var ret = [];
         for (var i=0, ln=browserPrefix.length; i<ln; i++) {
             Array.prototype.push.apply(
                 ret,
                 (( browserPrefix[i] + prefixProperties.join("|" + browserPrefix[i]) ).split("|"))
             );
-        }
+        }
         Array.prototype.push.apply(ret, prefixProperties);
         Array.prototype.push.apply(ret, properties);
         
@@ -121,9 +121,9 @@ var ScssHighlightRules = function() {
          "option|output|p|param|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|" + 
          "small|source|span|strike|strong|style|sub|summary|sup|table|tbody|td|" + 
          "textarea|tfoot|th|thead|time|title|tr|tt|u|ul|var|video|wbr|xmp").split("|")
-    );
+    );
 
-    var numRe = "\\-?(?:(?:[0-9]+)|(?:[0-9]*\\.[0-9]+))";
+    var numRe = "\\-?(?:(?:[0-9]+)|(?:[0-9]*\\.[0-9]+))";
 
     this.$rules = {
         "start" : [
@@ -282,7 +282,7 @@ var SassHighlightRules = function() {
             {regex: /^\s*/, onMatch: function(value, currentState, stack) {
                 if (stack[1] === -1)
                     stack[1] = Math.max(stack[2], value.length - 1);
-                if (value.length <= stack[1]) {stack.shift();stack.shift();stack.shift();
+                if (value.length <= stack[1]) {stack.shift();stack.shift();stack.shift();
                     this.next = stack.shift();
                     return "text";
                 } else {
@@ -346,7 +346,7 @@ oop.inherits(FoldMode, BaseFoldMode);
             var endColumn = session.getLine(endRow).length;
             return new Range(startRow, startColumn, endRow, endColumn);
         }
-    };
+    };
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
         var indent = line.search(/\S/);
@@ -358,7 +358,7 @@ oop.inherits(FoldMode, BaseFoldMode);
         if (indent == -1) {
             session.foldWidgets[row - 1] = prevIndent!= -1 && prevIndent < nextIndent ? "start" : "";
             return "";
-        }
+        }
         if (prevIndent == -1) {
             if (indent == nextIndent && line[indent] == "#" && next[indent] == "#") {
                 session.foldWidgets[row - 1] = "";

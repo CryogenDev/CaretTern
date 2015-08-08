@@ -15,7 +15,7 @@ var LispHighlightRules = function() {
         "keyword.operator": keywordOperator,
         "constant.language": constantLanguage,
         "support.function": supportFunctions
-    }, "identifier", true);
+    }, "identifier", true);
 
     this.$rules = 
         {

@@ -135,7 +135,7 @@ ace.define("ace/mode/ini",["require","exports","module","ace/lib/oop","ace/mode/
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
-var IniHighlightRules = require("./ini_highlight_rules").IniHighlightRules;
+var IniHighlightRules = require("./ini_highlight_rules").IniHighlightRules;
 var FoldMode = require("./folding/ini").FoldMode;
 
 var Mode = function() {

@@ -133,7 +133,7 @@ var keywords = (
         "constant.language": builtinConstants
     }, "identifier", true);
 
-    this.$rules = {
+    this.$rules = {
         start: [{ 
             token : "string",
             regex : "'",

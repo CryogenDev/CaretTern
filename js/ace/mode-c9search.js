@@ -11,7 +11,7 @@ function safeCreateRegexp(source, flag) {
     } catch(e) {}
 }
 
-var C9SearchHighlightRules = function() {
+var C9SearchHighlightRules = function() {
     this.$rules = {
         "start" : [
             {
@@ -74,7 +74,7 @@ var C9SearchHighlightRules = function() {
                     }, {
                         value: "'" + parts[i++],
                         type: "text"
-                    }];
+                    }];
                     if (parts[2] !== " in") {
                         replace = parts[i];
                         tokens.push({
@@ -84,11 +84,11 @@ var C9SearchHighlightRules = function() {
                             value: parts[i++],
                             type: "text"
                         });
-                    }
+                    }
                     tokens.push({
                         value: " " + parts[i++] + " ",
                         type: "text"
-                    });
+                    });
                     if (parts[i+1]) {
                         options = parts[i+1];
                         tokens.push({

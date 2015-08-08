@@ -4,7 +4,7 @@ ace.define("ace/mode/applescript_highlight_rules",["require","exports","module",
 var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var AppleScriptHighlightRules = function() {
+var AppleScriptHighlightRules = function() {
     var keywords = (
         "about|above|after|against|and|around|as|at|back|before|beginning|" +
         "behind|below|beneath|beside|between|but|by|considering|" +
@@ -131,7 +131,7 @@ oop.inherits(FoldMode, BaseFoldMode);
     this.foldingStopMarker = /^[^\[\{]*(\}|\])|^[\s\*]*(\*\/)/;
     this.singleLineBlockCommentRe= /^\s*(\/\*).*\*\/\s*$/;
     this.tripleStarBlockCommentRe = /^\s*(\/\*\*\*).*\*\/\s*$/;
-    this.startRegionRe = /^\s*(\/\*|\/\/)#region\b/;
+    this.startRegionRe = /^\s*(\/\*|\/\/)#?region\b/;
     this._getFoldWidgetBase = this.getFoldWidget;
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
@@ -219,13 +219,12 @@ oop.inherits(FoldMode, BaseFoldMode);
         
         return new Range(startRow, startColumn, endRow, session.getLine(endRow).length);
     };
-    
     this.getCommentRegionBlock = function(session, line, row) {
         var startColumn = line.search(/\s*$/);
         var maxRow = session.getLength();
         var startRow = row;
         
-        var re = /^\s*(?:\/\*|\/\/)#(end)?region\b/;
+        var re = /^\s*(?:\/\*|\/\/|--)#?(end)?region\b/;
         var depth = 1;
         while (++row < maxRow) {
             line = session.getLine(row);
@@ -253,7 +252,7 @@ ace.define("ace/mode/applescript",["require","exports","module","ace/lib/oop","a
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
 var Tokenizer = require("../tokenizer").Tokenizer;
-var AppleScriptHighlightRules = require("./applescript_highlight_rules").AppleScriptHighlightRules;
+var AppleScriptHighlightRules = require("./applescript_highlight_rules").AppleScriptHighlightRules;
 var FoldMode = require("./folding/cstyle").FoldMode;
 
 var Mode = function() {
@@ -265,7 +264,7 @@ oop.inherits(Mode, TextMode);
 (function() {
     this.lineCommentStart = "--";
     this.blockComment = {start: "(*", end: "*)"};
-    this.$id = "ace/mode/applescript";
+    this.$id = "ace/mode/applescript";
 }).call(Mode.prototype);
 
 exports.Mode = Mode;

@@ -13,7 +13,7 @@ var PropertiesHighlightRules = function() {
             {
                 token : "comment",
                 regex : /[!#].*$/
-            }, {
+            }, {
                 token : "keyword",
                 regex : /[=:]$/
             }, {
@@ -28,7 +28,7 @@ var PropertiesHighlightRules = function() {
             }
         ],
         "value" : [
-            {
+            {
                 regex : /\\$/,
                 token : "string",
                 next : "value"

@@ -22,14 +22,14 @@ var PraatHighlightRules = function() {
         "newline\\$|tab\\$|" +
         "shellDirectory\\$|homeDirectory\\$|preferencesDirectory\\$|" +
         "temporaryDirectory\\$|defaultDirectory\\$"
-    );
+    );
     var directives = (
         "clearinfo|endSendPraat"
     );
       
-    var functions = (
+    var functions = (
         "writeInfo|writeInfoLine|appendInfo|appendInfoLine|" +
-        "writeFile|writeFileLine|appendFile|appendFileLine|" +
+        "writeFile|writeFileLine|appendFile|appendFileLine|" +
         "abs|round|floor|ceiling|min|max|imin|imax|" +
         "sqrt|sin|cos|tan|arcsin|arccos|arctan|arctan2|sinc|sincpi|" +
         "exp|ln|log10|log2|" +
@@ -45,22 +45,22 @@ var PraatHighlightRules = function() {
         "hertzToSemitones|semitonesToHerz|" +
         "erb|hertzToErb|erbToHertz|" +
         "phonToDifferenceLimens|differenceLimensToPhon|" +
-        "beta|besselI|besselK|" +
+        "beta|besselI|besselK|" +
         "selected|selected\\$|numberOfSelected|variableExists|"+
         "index|rindex|startsWith|endsWith|"+
         "index_regex|rindex_regex|replace_regex\\$|"+
         "length|extractWord\\$|extractLine\\$|extractNumber|" +
-        "left\\$|right\\$|mid\\$|replace\\$|" +
-        "beginPause|endPause|" +
+        "left\\$|right\\$|mid\\$|replace\\$|" +
+        "beginPause|endPause|" +
         "demoShow|demoWindowTitle|demoInput|demoWaitForInput|" +
         "demoClicked|demoClickedIn|demoX|demoY|" +
         "demoKeyPressed|demoKey\\$|" +
         "demoExtraControlKeyPressed|demoShiftKeyPressed|"+
-        "demoCommandKeyPressed|demoOptionKeyPressed|" +
+        "demoCommandKeyPressed|demoOptionKeyPressed|" +
         "environment\\$|chooseReadFile\\$|" +
         "chooseDirectory\\$|createDirectory|fileReadable|deleteFile|" +
         "selectObject|removeObject|plusObject|minusObject|" +
-        "runScript|exitScript|" +
+        "runScript|exitScript|" +
         "beginSendPraat|endSendPraat"
     );
 
@@ -87,77 +87,77 @@ var PraatHighlightRules = function() {
         "SpeechSynthesizer|SpellingChecker|Strings|StringsIndex|Table|"      +
         "TableOfReal|TextGrid|TextInterval|TextPoint|TextTier|Tier|"         +
         "Transition|VocalTract|Weight|WordList"
-    );
+    );
 
     this.$rules = {
         "start" : [
-            {
+            {
                 token : "string.interpolated",
                 regex : /'((?:[a-z][a-zA-Z0-9_]*)(?:\$|#|:[0-9]+)?)'/
-            }, {
+            }, {
                 token : ["text", "text", "keyword.operator", "text", "keyword"],
                 regex : /(^\s*)(?:([a-z][a-zA-Z0-9_]*\$?\s+)(=)(\s+))?(stopwatch)/
-            }, {
+            }, {
                 token : ["text", "keyword", "text", "string"],
                 regex : /(^\s*)(print(?:line)?|echo|exit|pause|sendpraat|include|execute)(\s+)(.*)/
-            }, {
+            }, {
                 token : ["text", "keyword"],
                 regex : "(^\\s*)(" + directives + ")$"
-            }, {
+            }, {
                 token : ["text", "keyword.operator", "text"],
                 regex : /(\s+)((?:\+|-|\/|\*|<|>)=?|==?|!=|%|\^|\||and|or|not)(\s+)/
-            }, {
+            }, {
                 token : ["text", "text", "keyword.operator", "text", "keyword", "text", "keyword"],
                 regex : /(^\s*)(?:([a-z][a-zA-Z0-9_]*\$?\s+)(=)(\s+))?(?:((?:no)?warn|nocheck|noprogress)(\s+))?((?:[A-Z][^.:"]+)(?:$|(?:\.{3}|:)))/
-            }, {
+            }, {
                 token : ["text", "keyword", "text", "keyword"],
                 regex : /(^\s*)(?:(demo)?(\s+))((?:[A-Z][^.:"]+)(?:$|(?:\.{3}|:)))/
-            }, {
+            }, {
                 token : ["text", "keyword", "text", "keyword"],
                 regex : /^(\s*)(?:(demo)(\s+))?(10|12|14|16|24)$/
-            }, {
+            }, {
                 token : ["text", "support.function", "text"],
                 regex : /(\s*)(do\$?)(\s*:\s*|\s*\(\s*)/
-            }, {
+            }, {
                 token : "entity.name.type",
                 regex : "(" + objectTypes + ")"
-            }, {
+            }, {
                 token : "variable.language",
                 regex : "(" + predefinedVariables + ")"
-            }, {
+            }, {
                 token : ["support.function", "text"],
                 regex : "((?:" + functions + ")\\$?)(\\s*(?::|\\())"
-            }, {
+            }, {
                 token : "keyword",
                 regex : /(\bfor\b)/,
                 next : "for"
-            }, {
+            }, {
                 token : "keyword",
                 regex : "(\\b(?:" + keywords + ")\\b)"
-            }, {
+            }, {
                 token : "string",
                 regex : /"[^"]*"/
-            }, {
+            }, {
                 token : "string",
                 regex : /"[^"]*$/,
                 next : "brokenstring"
-            }, {
+            }, {
                 token : ["text", "keyword", "text", "entity.name.section"],
                 regex : /(^\s*)(\bform\b)(\s+)(.*)/,
                 next : "form"
-            }, {
+            }, {
                 token : "constant.numeric",
                 regex : /\b[+-]?\d+(?:(?:\.\d*)?(?:[eE][+-]?\d+)?)?\b/
-            }, {
+            }, {
                 token : ["keyword", "text", "entity.name.function"],
                 regex : /(procedure)(\s+)(\S+)/
-            }, {
+            }, {
                 token : ["entity.name.function", "text"],
                 regex : /(@\S+)(:|\s*\()/
-            }, {
+            }, {
                 token : ["text", "keyword", "text", "entity.name.function"],
                 regex : /(^\s*)(call)(\s+)(\S+)/
-            }, {
+            }, {
                 token : "comment",
                 regex : /(^\s*#|;).*$/
             }, {
@@ -292,7 +292,7 @@ oop.inherits(FoldMode, BaseFoldMode);
     this.foldingStopMarker = /^[^\[\{]*(\}|\])|^[\s\*]*(\*\/)/;
     this.singleLineBlockCommentRe= /^\s*(\/\*).*\*\/\s*$/;
     this.tripleStarBlockCommentRe = /^\s*(\/\*\*\*).*\*\/\s*$/;
-    this.startRegionRe = /^\s*(\/\*|\/\/)#region\b/;
+    this.startRegionRe = /^\s*(\/\*|\/\/)#?region\b/;
     this._getFoldWidgetBase = this.getFoldWidget;
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
@@ -380,13 +380,12 @@ oop.inherits(FoldMode, BaseFoldMode);
         
         return new Range(startRow, startColumn, endRow, session.getLine(endRow).length);
     };
-    
     this.getCommentRegionBlock = function(session, line, row) {
         var startColumn = line.search(/\s*$/);
         var maxRow = session.getLength();
         var startRow = row;
         
-        var re = /^\s*(?:\/\*|\/\/)#(end)?region\b/;
+        var re = /^\s*(?:\/\*|\/\/|--)#?(end)?region\b/;
         var depth = 1;
         while (++row < maxRow) {
             line = session.getLine(row);

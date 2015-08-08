@@ -43,7 +43,7 @@ oop.inherits(FoldMode, BaseFoldMode);
             var endColumn = session.getLine(endRow).length;
             return new Range(startRow, startColumn, endRow, endColumn);
         }
-    };
+    };
     this.getFoldWidget = function(session, foldStyle, row) {
         var line = session.getLine(row);
         var indent = line.search(/\S/);
@@ -55,7 +55,7 @@ oop.inherits(FoldMode, BaseFoldMode);
         if (indent == -1) {
             session.foldWidgets[row - 1] = prevIndent!= -1 && prevIndent < nextIndent ? "start" : "";
             return "";
-        }
+        }
         if (prevIndent == -1) {
             if (indent == nextIndent && line[indent] == "#" && next[indent] == "#") {
                 session.foldWidgets[row - 1] = "";
@@ -130,7 +130,7 @@ var SnippetHighlightRules = function() {
         "regexp" : [
             {regex: /\\./, token: "escape"},
             {regex: /\[/, token: "regex.start", next: "charClass"},
-            {regex: "/", token: "string.regex", next: "format"},
+            {regex: "/", token: "string.regex", next: "format"},
             {"token": "string.regex", regex:"."}
         ],
         charClass : [
@@ -141,7 +141,7 @@ var SnippetHighlightRules = function() {
         "format" : [
             {regex: /\\[ulULE]/, token: "keyword"},
             {regex: /\$\d+/, token: "variable"},
-            {regex: "/[gim]*:?", token: "string.regex", next: "start"},
+            {regex: "/[gim]*:?", token: "string.regex", next: "start"},
             {"token": "string", regex:"."}
         ]
     };
