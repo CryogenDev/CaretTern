@@ -51,7 +51,7 @@
         "defs": ["browser", "ecma5"],
 
         //http://ternjs.net/doc/manual.html#plugins
-        //NOTE: node plugin does not appear to be working correctly
+        //NOTE: tern and node plugins do not appear to be working correctly, issue is likely w/ Caret-T/ChromeApp architecture (not tern or ace plugin). to debug this, open dev tools and go to chrome://inspect/#apps to see console for the sandbox that is running tern
         "plugins": {
             //http://ternjs.net/doc/manual.html#plugin_doc_comment
             //TODO: when tern is upgraded to latest version, fullDocs wil have a different name
