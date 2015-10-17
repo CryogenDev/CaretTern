@@ -1,6 +1,6 @@
 /* jshint laxcomma:false, unused:true, laxbreak:false, maxerr:10000 */
 
-define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (File, command, Settings) {
+define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(File, command, Settings) {
 
     //#region Default
 
@@ -15,8 +15,8 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
     document.find("textarea").setAttribute("tabindex", -1);
 
     //one-time startup
-    var init = function () {
-        aceConfig.themes.forEach(function (theme) {
+    var init = function() {
+        aceConfig.themes.forEach(function(theme) {
             var option = document.createElement("option");
             option.innerHTML = theme.label;
             option.setAttribute("value", theme.name);
@@ -46,8 +46,8 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
         defaultFontSize();
 
         //load tern
-        ace.config.loadModule('ace/ext/tern', function () {
-            var ternStarted = function () {
+        ace.config.loadModule('ace/ext/tern', function() {
+            var ternStarted = function() {
                 try {
                     if (editor.ternServer) {
                         // console.log('userConfig.tern', userConfig.tern);
@@ -65,7 +65,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
                         /**
                          * used by tern to get name of current file
                          */
-                        editor.ternServer.options.getCurrentFileName = function (callback) {
+                        editor.ternServer.options.getCurrentFileName = function(callback) {
                             callback(editor.session.fileName);
                         };
 
@@ -74,14 +74,14 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
                          * NOTE: chromes filesystem wants to open files with forward slashes and they must start with the name of the opened project folder
                          * @param {string} path - path to resolve
                          */
-                        editor.ternServer.options.resolveFilePath = function (path, callback) {
+                        editor.ternServer.options.resolveFilePath = function(path, callback) {
                             try {
                                 /**
                                  * get open project directories, needed to build the correct relative path
                                  * (has to guess which directory to use by using string contains...
                                  *  could possibly break)
                                  */
-                                editor.session.file.getPath(function (err, p) {
+                                editor.session.file.getPath(function(err, p) {
                                     var currentPath = p;
                                     //var currentPath=editor.session.file.entry.fullPath; //this returns /CaretTern/js/ace/ext-tern.js , but doesn't work on first load if retained file...
                                     ////note: current path is path of currently opened file, example: ~\Desktop\localGit\CaretTern\js\ace\ext-tern.js
@@ -130,9 +130,9 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
                          * tell tern how to get a file (requiredJS, jump to def, vs refs, etc..)
                          * @param {string} name - full file path or relative (will likely be relative)
                          */
-                        editor.ternServer.options.getFile = function (name, callback) {
-                            require(["ui/projectManager"], function (projectManager) {
-                                projectManager.readFile(name, function (err, data) {
+                        editor.ternServer.options.getFile = function(name, callback) {
+                            require(["ui/projectManager"], function(projectManager) {
+                                projectManager.readFile(name, function(err, data) {
                                     if (err) {
                                         console.log('err reading file ' + name, err);
                                     }
@@ -142,12 +142,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
                         };
 
                         //tell it how to switch to another file
-                        editor.ternServer.options.switchToDoc = function (name, start, end) {
-                            require(["ui/projectManager"], function (projectManager) {
+                        editor.ternServer.options.switchToDoc = function(name, start, end) {
+                            require(["ui/projectManager"], function(projectManager) {
                                 console.log('open project file name: ' + name);
                                 projectManager.openFile(name);
                                 //GHETTO: hopefully the file is open by now, so lets jump to the start location (need to update project manager openFile to accept callback when its done to trigger this)
-                                setTimeout(function () {
+                                setTimeout(function() {
                                     editor.gotoLine(start.row, start.column || 0); //this will make sure that the line is expanded
                                     var sel = editor.getSession().getSelection(); // sel.selectionLead.setPosistion();// sel.selectionAnchor.setPosistion();
                                     sel.setSelectionRange({
@@ -181,22 +181,22 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
                 /** use a fake worker for tern server that uses sandbox because chrome app cant use eval outside of sandbox (terns acorn parser uses eval)
                  * todo: once new acorn works in web worker can get rid of this by using acorn_csp!
                  */
-                workerClass: function () {
+                workerClass: function() {
                     var self = this;
                     this.sandboxFrame = document.getElementById('sandboxFrame');
-                    this.postMessage = function (message) {
+                    this.postMessage = function(message) {
                         this.sandboxFrame.contentWindow.postMessage(message, '*'); //2nd param allows any origin
                     };
                     this.onmessage = null;
                     this.error = null;
-                    window.addEventListener('message', function (event) {
+                    window.addEventListener('message', function(event) {
                         if (typeof self.onmessage === 'function') {
                             self.onmessage(event);
                         }
                     });
                 },
                 /** called once tern server has started */
-                startedCb: function () {
+                startedCb: function() {
                     ternStarted();
                 }
             };
@@ -225,14 +225,17 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
     });*/
     //#endregion
 
-    ace.config.loadModule('ace/ext/html_beautify', function () {
+    ace.config.loadModule('ace/ext/html_beautify', function() {
         editor.setOptions({
-            autoBeautify: true
+            //turns on beautify when '}' typed in javacript or css
+            autoBeautify: true,
+            //turns on hotkeys
+            htmlBeautify: true,
         });
     });
 
     //#region ShowMessage
-    window.alert = function (s) {
+    window.alert = function(s) {
         command.fire("app:show-prompt");
         var cmd = document.find(".command-line input");
         cmd.style.color = "red"; //note: will be set back to red on next show
@@ -241,7 +244,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
     window.command = command; //debugging
     console.log('global: command (caret command manager); commandList(filter): list all commands with optional filter');
     //lists commands in console with optional filter
-    window.commandList = function (filter) {
+    window.commandList = function(filter) {
         var arr = [];
         for (var i = 0; i < command.list.length; i++) {
             var c = command.list[i];
@@ -259,12 +262,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
     //#endregion
 
     //#region DefaultCommands
-    var defaultFontSize = function (c) {
+    var defaultFontSize = function(c) {
         var size = Settings.get("user").fontSize;
         editor.container.style.fontSize = size ? size + "px" : null;
         if (c) c();
     };
-    var adjustFontSize = function (delta, c) {
+    var adjustFontSize = function(delta, c) {
         var current = editor.container.style.fontSize;
         if (current) {
             current = current.replace("px", "") * 1;
@@ -280,14 +283,14 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
     command.on("editor:adjust-zoom", adjustFontSize);
     command.on("init:startup", init);
     command.on("init:restart", reset);
-    command.on("editor:theme", function (theme, c) {
+    command.on("editor:theme", function(theme, c) {
         editor.setTheme("ace/theme/" + theme);
         themes.value = theme;
         editor.focus();
         if (c) c();
     });
-    command.on("editor:print", function (c) {
-        ace.require("ace/config").loadModule("ace/ext/static_highlight", function (_static) {
+    command.on("editor:print", function(c) {
+        ace.require("ace/config").loadModule("ace/ext/static_highlight", function(_static) {
             var session = editor.getSession();
             var printable = _static.renderSync(session.getValue(), session.getMode(), editor.renderer.theme);
             var iframe = document.createElement("iframe");
@@ -297,15 +300,15 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function (
             iframe.width = iframe.height = 1;
             iframe.style.display = "none";
             document.body.append(iframe);
-            setTimeout(function () {
+            setTimeout(function() {
                 iframe.contentWindow.print();
-                setTimeout(function () {
+                setTimeout(function() {
                     iframe.remove();
                 });
             });
         });
     });
-    command.on("editor:word-count", function (c) {
+    command.on("editor:word-count", function(c) {
         var text = editor.getSession().getValue();
         var lines = text.split("\n").length + " lines";
         var characters = text.length + " characters";
