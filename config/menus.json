@@ -38,11 +38,15 @@
     }, "divider", {
         "label": "Beautify",
         "command": "ace:command",
-        "argument":"beautify"
+        "argument": "beautify"
+    }, {
+        "label": "Beautify (force end expand)",
+        "command": "ace:command",
+        "argument": "beautifyEndExpand"
     }, {
         "label": "Remove Extra Blank and EOL",
         "command": "ace:command",
-        "argument":"removeBlank"
+        "argument": "removeBlank"
     }, "divider", {
         "label": "Insert from File",
         "command": "session:insert-from-file"

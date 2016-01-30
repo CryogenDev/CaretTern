@@ -120,6 +120,9 @@
     "Ctrl-B": {
         "ace": "beautify"
     },
+    "Ctrl-Alt-B": {
+        "ace": "beautifyEndExpand"
+    },
     "Ctrl-Shift-B": {
         "ace": "removeBlank"
     },
