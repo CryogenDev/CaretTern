@@ -82,5 +82,22 @@
                 "override": ""
             }*/
         }
+    },
+
+    //js beautify options: http://jsbeautifier.org/
+    "beautify": {
+        "space_before_conditional": true,
+        "keep_array_indentation": false,
+        "preserve_newlines": true,
+        "jslint_happy": false,
+        "max_preserve_newlines": 3,
+        "break_chained_methods": false,
+        "indent_scripts": "normal",
+        //[collapse|collapse-preserve-inline|expand|end-expand|none]
+        "brace_style": "end-expand",
+        "unescape_strings": false,
+        "wrap_line_length": "0",
+        "space_after_anon_function": false,
+        "max_char": 0
     }
 }

@@ -45,7 +45,7 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         editor.setAnimatedScroll(userConfig.animatedScroll || true);
         defaultFontSize();
 
-        //load tern
+
         ace.config.loadModule('ace/ext/tern', function() {
             var ternStarted = function() {
                 try {
@@ -57,11 +57,10 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
 
                         editor.ternServer.options.defs = userConfig.tern.defs;
 
-
                         editor.ternServer.options.plugins = userConfig.tern.plugins;
 
-                        //set options that can be changed at any time without restarting server
 
+                        //set options that can be changed at any time without restarting server
                         /**
                          * used by tern to get name of current file
                          */
@@ -207,6 +206,26 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
                 enableBasicAutocompletion: userConfig.autocomplete
             });
         });
+
+        ace.config.loadModule('ace/ext/html_beautify', function(beautify) {
+            editor.setOptions({
+                //turns on beautify when '}' typed in javacript or css
+                autoBeautify: true,
+                //turns on hotkeys
+                htmlBeautify: true,
+            });
+
+            try {
+                if (userConfig.beautify) {
+                    for (var k in userConfig.beautify) {
+                        beautify.options[k] = userConfig.beautify[k];
+                    }
+                }
+            }
+            catch (ex) {
+                console.log('beautify error', ex);
+            }
+        });
     }
 
     //#endregion
@@ -224,15 +243,6 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         split.setSplits(2);
     });*/
     //#endregion
-
-    ace.config.loadModule('ace/ext/html_beautify', function() {
-        editor.setOptions({
-            //turns on beautify when '}' typed in javacript or css
-            autoBeautify: true,
-            //turns on hotkeys
-            htmlBeautify: true,
-        });
-    });
 
     //#region ShowMessage
     window.alert = function(s) {
