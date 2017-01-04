@@ -208,9 +208,12 @@ define(["storage/file", "command", "settings!ace,user", "util/dom2"], function(F
         });
 
         ace.config.loadModule('ace/ext/html_beautify', function(beautify) {
+
+            if (!userConfig.hasOwnProperty('autoBeautify')) { userConfig.autoBeautify = true; }
+
             editor.setOptions({
                 //turns on beautify when '}' typed in javacript or css
-                autoBeautify: true,
+                autoBeautify: userConfig.autoBeautify,
                 //turns on hotkeys
                 htmlBeautify: true,
             });
