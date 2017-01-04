@@ -93,10 +93,10 @@
         "max_preserve_newlines": 3,
         "break_chained_methods": false,
         "indent_scripts": "normal",
-        //[collapse|collapse-preserve-inline|expand|end-expand|none]
-        "brace_style": "end-expand",
+        //[collapse|expand|end-expand|none] (any of the former + ",preserve-inline")
+        "brace_style": "end-expand,preserve-inline",
         "unescape_strings": false,
-        "wrap_line_length": "0",
+        "wrap_line_length": 0,
         "space_after_anon_function": false,
         "max_char": 0
     }
