@@ -50,6 +50,7 @@ define(["storage/syncFS", "storage/syncfile", "command", "util/manos"], function
             }
             catch (e) {
                 //parse failed
+                console.error('failed to load user settings file ' + name + '. Using default instead. Reset user settings to default to fix this');
                 return original;
             }
             //flat arrays (like menus.json) just get returned, not merged
@@ -178,7 +179,7 @@ define(["storage/syncFS", "storage/syncfile", "command", "util/manos"], function
                 }, {
                     title: "Cancel emergency reset"
                 }]
-            }, function() {});
+            }, function() { });
         });
     });
 
